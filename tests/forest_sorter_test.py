@@ -41,7 +41,7 @@ def parse_inputs():
                       help="Minimum number of halos to test using. Default: 10,000", 
                       default = 10000, type = int) 
     parser.add_option("-s", "--sort_id", dest="sort_id", 
-                      help="Field name for the key we are sorting on. Default: ForestID.",  
+                      help="Field name for the ID key we are sorting on. Default: ForestID.",  
                       default = "ForestID")
     parser.add_option("-m", "--mass_def", dest="sort_mass", 
                       help="Field name for the mass key we are sorting on. Default: Mass_200mean.", 
@@ -237,6 +237,8 @@ def create_test_input_data(opt):
     Note: We copy entire snapshots over meaning that halo counts will not be exact.  If the first
     snapshot with halos has 6,000 halos and the second has 7,000, our testing file will contain
     13,000 halos. 
+
+    If the user asks to test on more halos than there are in the data file we raise a RuntimeError.
  
     Parameters
     ----------
@@ -248,12 +250,15 @@ def create_test_input_data(opt):
     Returns
     ----------
 
-    True if test passes, False otherwise.
+    fname_out: String.
+        The path to the small copied data file. 
 
     """
 
+    test_dir = os.path.dirname(__file__)
+    fname_out = "{0}/my_test_data.hdf5"
 
-    with h5py.File(opt["fname_in"], "r") as f_in, h5py.File("./my_test_data.hdf5", "w") as f_out:
+    with h5py.File(opt["fname_in"], "r") as f_in, h5py.File(fname_out, "w") as f_out:
         NHalos = 0
         
         Snap_Keys = [key for key in f_in.keys() if (("SNAP" in key.upper()) == True)] 
@@ -271,9 +276,34 @@ def create_test_input_data(opt):
             if NHalos >= opt["NHalos_test"]:
                 break
 
-    return "./my_test_data.hdf5"
+    if NHalos < opt["NHalos_test"]:
+        print("Your supplied data file did not contain enough halos to test on.")
+        print("Your file contained {0} whereas you specified to run on {1} halos."
+              .format(NHalos, opt["NHalos_test"]))
+        print("Either lower the number of halos to test on (--Nhalos_test) or use other data.")
+        raise RuntimeError
+
+    return fname_out 
 
 def cleanup(opt):
+    """
+
+    Remove the output sorted test data and if the user specified their own data to use, remove the
+    small chunk of data we created. 
+ 
+    Parameters
+    ----------
+
+    opt: Dictionary.  
+        Dictionary containing the option parameters specified at runtime.  
+        Used to get file names. 
+         
+    Returns
+    ----------
+
+    None 
+
+    """
 
     if "-f" in sys.argv: # Don't delete the default input data. 
         os.remove(opt["fname_in"])
@@ -284,6 +314,9 @@ def test_run():
 
     Function to run the tests. This will be the only function called by pytest which in turn will
     call all the other test functions.
+
+    Alternatively if the user wishes to specify their own input data, this function will be called
+    by main.
  
     Parameters
     ----------
@@ -328,4 +361,8 @@ def test_run():
     print("All tests have passed.")
 
     cleanup(opt)
-     
+    
+
+if __name__ == "__main__":
+
+    test_run()

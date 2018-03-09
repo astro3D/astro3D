@@ -28,7 +28,7 @@ def parse_inputs():
 
     parser.add_option("-f", "--fname_in", dest="fname_in", help="Path to the input HDF5 data file. Required.")
     parser.add_option("-o", "--fname_out", dest="fname_out", help="Path to the output HDF5 data file. Required.")
-    parser.add_option("-s", "--sort_id", dest="sort_id", help="Field name for the key we are sorting on. Default: ForestID.", default = "ForestID")
+    parser.add_option("-s", "--sort_id", dest="sort_id", help="Field name for the ID key we are sorting on. Default: ForestID.", default = "ForestID")
     parser.add_option("-m", "--mass_def", dest="sort_mass", help="Field name for the mass key we are sorting on. Default: Mass_200mean.", default = "Mass_200mean")
     parser.add_option("-i", "--HaloID", dest="halo_id", help="Field name for halo ID. Default: ID.", default = "ID")
     parser.add_option("-p", "--ID_fields", dest="ID_fields", help="Field names for those that contain IDs.  Default: ('ID', 'Tail', 'Head', 'NextSubHalo', 'Dummy1', 'Dumm2').", default = ("ID", "Tail", "Head", "NextSubHalo", "Dummy", "Dummy")) 
