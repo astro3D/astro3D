@@ -7,7 +7,6 @@ import h5py
 import os
 
 from genesis.utils import forest_sorter as fs
-test_dir = os.path.dirname(__file__)
 
 def parse_inputs():
     """
@@ -28,6 +27,7 @@ def parse_inputs():
     """
 
     parser = OptionParser()
+    test_dir = os.path.dirname(__file__)
 
     parser.add_option("-f", "--fname_in", dest="fname_in", 
                       help="Path to test HDF5 data. Default: {0}/test_data.hdf5".format(test_dir), 
@@ -336,8 +336,5 @@ def tests(opt):
 if __name__ == '__main__':
     
     opt = parse_inputs()
-    status = tests(vars(opt))
-
-    if (status == False):
-        return False
+    tests(vars(opt))
 
