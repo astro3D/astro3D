@@ -119,7 +119,7 @@ def my_test_sorted_order(opt):
                     pytest.fail()
 
                 if (outer_sort == outer_sort_next):
-                    if (inner_sort < inner_sort_next):
+                    if (inner_sort > inner_sort_next):
                         print("For Halo ID {0} we had a {1} of {2}.  After sorting via lexsort "
                               "inner-key {1}, the next Halo has ID {3} and a {1} of {4}"
                               .format(halo_id, opt["sort_mass"], inner_sort, halo_id_next,
