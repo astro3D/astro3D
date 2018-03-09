@@ -5,6 +5,7 @@ from optparse import OptionParser
 import sys
 import h5py
 import os
+import pytest
 
 from genesis.utils import forest_sorter as fs
 
@@ -69,7 +70,7 @@ def parse_inputs():
 
     return opt
 
-def test_sorted_order(opt):
+def my_test_sorted_order(opt):
     """
 
     Checks the indices of the sorted output file to ensure that the sorting has been performed
@@ -85,7 +86,7 @@ def test_sorted_order(opt):
     Returns
     ----------
 
-    True if test passes, False otherwise. 
+    None. ``Pytest.fail()`` is invoked if the test fails. 
 
     """
 
@@ -114,7 +115,8 @@ def test_sorted_order(opt):
                           opt["sort_id"], outer_sort, halo_id_next, outer_sort_next))
                     print("Since we are sorting using {0} they MUST be in ascending order.".format(opt["sort_id"]))
 
-                    return False 
+                    cleanup(opt)
+                    pytest.fail()
 
                 if (outer_sort == outer_sort_next):
                     if (inner_sort < inner_sort_next):
@@ -125,11 +127,10 @@ def test_sorted_order(opt):
                         print("Since we are sorting using {0} they MUST be in ascending "
                               "order.".format(opt["sort_mass"]))
 
-                        return False
+                        cleanup(opt)
+                        pytest.fail()
  
-    return True 
-
-def test_check_haloIDs(opt):
+def my_test_check_haloIDs(opt):
     """
     
     This test checks the passed haloIDs and snapshot number to ensure the haloIDs match the given formula.
@@ -144,7 +145,7 @@ def test_check_haloIDs(opt):
     Returns
     ----------
 
-    True if test passes, False otherwise.     
+    None. ``Pytest.fail()`` is invoked if the test fails.     
 
     """
    
@@ -170,11 +171,10 @@ def test_check_haloIDs(opt):
             print("If this is the test input data file, then your input data is wrong!\n"
                   "If this is the test sorted output file, contact jseiler@swin.edu.au.")
 
-            return False
+            cleanup(opt)
+            pytest.fail()
 
-    return True
-
-def test_sorted_properties(opt):
+def my_test_sorted_properties(opt):
     """
 
     Ensures that the halo properties (i.e., the fields that don't contain IDs) were sorted and
@@ -225,10 +225,9 @@ def test_sorted_properties(opt):
                           "data stored in the output file is {3}".format(input_data, indices,
                           input_data_sorted, output_data))
 
-                    return False
+                    cleanup(opt) 
+                    pytest.fail()
     
-    return True
-
 def create_test_input_data(opt):
     """
 
@@ -274,17 +273,22 @@ def create_test_input_data(opt):
 
     return "./my_test_data.hdf5"
 
-def tests(opt):
+def cleanup(opt):
+
+    if "-f" in sys.argv: # Don't delete the default input data. 
+        os.remove(opt["fname_in"])
+    os.remove(opt["fname_out"]) 
+
+def test_run():
     """
 
-    Wrapper to create the input data file (if requested) and then perform the tests.
+    Function to run the tests. This will be the only function called by pytest which in turn will
+    call all the other test functions.
  
     Parameters
     ----------
 
-    opt: Dictionary.  
-        Dictionary containing the option parameters specified at runtime.  
-        Used to get file name and number of halos to copy. 
+    None.
      
     Returns
     ----------
@@ -293,7 +297,9 @@ def tests(opt):
 
     """
 
-
+    opt = parse_inputs()
+    opt = vars(opt)  # Cast to dictionary.
+    
     if "-f" in sys.argv: # User specified their own input data.
         print("You have supplied your own test input data.")
         print("Saving a small file with the first {0} Halos.".format(opt["NHalos_test"]))
@@ -310,31 +316,16 @@ def tests(opt):
     opt["ID_fields"] = tmp_ID_fields #  Then put back the old option.
 
     print("Checking that the produced temporal IDs are correct.")
-    status = test_check_haloIDs(opt)  
-    if (status == False):
-        return False
+    my_test_check_haloIDs(opt)  
 
     print("Checking that the sort order was done/saved correctly for the sort keys.") 
-    status = test_sorted_order(opt)  
-    if (status == False):
-        return False
+    my_test_sorted_order(opt)  
 
     print("Checking that the sort order was done/saved correctly for the other halo properties.")
-    status = test_sorted_properties(opt)  
-    if (status == False):
-        return False
+    my_test_sorted_properties(opt)  
 
     print("")
     print("All tests have passed.")
 
-    if "-f" in sys.argv: # Don't delete the default input data. 
-        os.remove(opt["fname_in"])
-    os.remove(opt["fname_out"]) 
-
-    return True
- 
-if __name__ == '__main__':
-    
-    opt = parse_inputs()
-    tests(vars(opt))
-
+    cleanup(opt)
+     
