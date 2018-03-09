@@ -8,6 +8,7 @@ import os
 import pytest
 
 from genesis.utils import forest_sorter as fs
+from genesis.utils import common as common 
 
 def parse_inputs():
     """
@@ -92,7 +93,7 @@ def my_test_sorted_order(opt):
 
     with h5py.File(opt["fname_out"], "r") as f_in:
            
-        Snap_Keys, Snap_Nums = fs.get_snapkeys_and_nums(f_in.keys())
+        Snap_Keys, Snap_Nums = common.get_snapkeys_and_nums(f_in.keys())
 
         for snap_key in Snap_Keys:
             NHalos = len(f_in[snap_key][opt["halo_id"]])
@@ -153,14 +154,14 @@ def my_test_check_haloIDs(opt):
 
     for file_to_test in files: 
         with h5py.File(file_to_test, "r") as f_in:
-            Snap_Keys, Snap_Nums = fs.get_snapkeys_and_nums(f_in.keys())
+            Snap_Keys, Snap_Nums = common.get_snapkeys_and_nums(f_in.keys())
         
             for snap_key in Snap_Keys:
                 if len(f_in[snap_key][opt["halo_id"]]) == 0:  # Skip empty snapshots. 
                     continue
 
                 file_haloIDs = f_in[snap_key][opt["halo_id"]][:] 
-                generated_haloIDs = fs.index_to_temporalID(np.arange(len(file_haloIDs)), 
+                generated_haloIDs = common.index_to_temporalID(np.arange(len(file_haloIDs)), 
                                                                      Snap_Nums[snap_key],
                                                                      opt["index_mult_factor"])
     
@@ -200,7 +201,7 @@ def my_test_sorted_properties(opt):
   
     with h5py.File(opt["fname_in"], "r") as f_in, h5py.File(opt["fname_out"], "r") as f_out:
            
-        Snap_Keys, Snap_Nums = fs.get_snapkeys_and_nums(f_out.keys())
+        Snap_Keys, Snap_Nums = common.get_snapkeys_and_nums(f_out.keys())
  
         for snap_key in Snap_Keys:  # Now let's check each field.
             for field in f_out[snap_key]:
@@ -264,13 +265,13 @@ def create_test_input_data(opt):
         Snap_Keys = [key for key in f_in.keys() if (("SNAP" in key.upper()) == True)] 
         Snap_Nums = dict() 
         for key in Snap_Keys: 
-            Snap_Nums[key] = fs.snap_key_to_snapnum(key) 
+            Snap_Nums[key] = common.snap_key_to_snapnum(key) 
 
         for snap_key in Snap_Keys:
             if len(f_in[snap_key][opt["halo_id"]]) == 0:  # Skip empty snapshots. 
                 continue
         
-            fs.copy_group(f_in, f_out, snap_key, opt)
+            common.copy_group(f_in, f_out, snap_key, opt)
             NHalos += len(f_in[snap_key][opt["halo_id"]])
 
             if NHalos >= opt["NHalos_test"]:

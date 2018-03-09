@@ -21,17 +21,17 @@ default test does not pass, please email jseiler@swin.edu.au
 
 You are also able to run the test on your own provided data.  To do this run ``python3
 tests/forest_sorter_test.py`` with command line arguments ``-f`` to specify your data file name and
-``-n`` many halos you wish to test on (default is 10,000).  ##If you are not using the Treefrog
+``-n`` many halos you wish to test on (default is 10,000).  **If you are not using the Treefrog
 merger tree data format you may need to specify more command line arguments.  Refer to the section
-#other merger tree formats# ##. 
+other merger tree formats**
 
 ``$ python3 tests/forest_sorter_test.py --fname_in=/Path/To/my_data.hdf5 -Nhalos_test=1000``
 
 If the default test passes but your specific test fails please ensure that your data file is not
 corrupt.  Importantly, check that the snapshot keys are named appropriately.  We require the
-snapshot fields to include the word ##snap## (case insensitive) and assume that the snapshot number
+snapshot fields to include the word **snap** (case insensitive) and assume that the snapshot number
 corresponding to the snapshot key is included as a single cluster towards the end of the key;
-##snap53_04# should correspond to snapshot number 04 for example. 
+**snap53_04** should correspond to snapshot number 04 for example. 
 
 If the snapshot fields are named correctly and your data can be otherwise read in via h5py, please
 email jseiler@swin.edu.au
