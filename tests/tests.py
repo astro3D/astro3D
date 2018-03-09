@@ -310,13 +310,19 @@ def tests(opt):
     opt["ID_fields"] = tmp_ID_fields #  Then put back the old option.
 
     print("Checking that the produced temporal IDs are correct.")
-    test_check_haloIDs(opt)  
+    status = test_check_haloIDs(opt)  
+    if (status == False):
+        return False
 
     print("Checking that the sort order was done/saved correctly for the sort keys.") 
-    test_sorted_order(opt)  
+    status = test_sorted_order(opt)  
+    if (status == False):
+        return False
 
     print("Checking that the sort order was done/saved correctly for the other halo properties.")
-    test_sorted_properties(opt)  
+    status = test_sorted_properties(opt)  
+    if (status == False):
+        return False
 
     print("")
     print("All tests have passed.")
@@ -324,8 +330,14 @@ def tests(opt):
     if "-f" in sys.argv: # Don't delete the default input data. 
         os.remove(opt["fname_in"])
     os.remove(opt["fname_out"]) 
+
+    return True
  
 if __name__ == '__main__':
     
     opt = parse_inputs()
-    tests(vars(opt))
+    status = tests(vars(opt))
+
+    if (status == False):
+        return False
+
