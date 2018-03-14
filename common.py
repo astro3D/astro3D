@@ -5,14 +5,16 @@ import numpy as np
 import h5py
 
 def snap_key_to_snapnum(snap_key):
-    """
+    """    
+    Given the name of a snapshot key, finds the associated snapshot number.
+ 
+    This is necessary because the 0th snapshot key may not be snapshot 000 and
+    there could be missing snapshots. This function searches backwards for a
+    group of digits that identify the snapshot number.  If there are numbers
+    outside of this cluster they will be disregarded and a warning raised.
 
-    Given the name of a snapshot key, we wish to find the snapshot number associated with this key.
-    This is necessary because the 0th snapshot key may not be snapshot 000 and there could be missing snapshots (e.g., snapshot 39 is followed by snapshot 41).
-
-    This function takes the key and searches backwards for a group of digits that identify the snapshot number. 
-    The function will only consider numbers that are clustered together, starting at the end of the snapshot key.  If there are numbers outside of this cluster they will be disregarded and a warning raised.
-    For example, if the key is "Snap1_030", the function will return 30 and issue a warning that there were digits ignored. 
+    For example, if the key is "Snap1_030", the function will return 30 and 
+    issue a warning that there were digits ignored. 
     
     Parameters
     ----------
@@ -23,33 +25,40 @@ def snap_key_to_snapnum(snap_key):
     Returns
     ----------
 
-    snapnum: integer.  Required.
-        The snapshot number that corresponds to the snapshot key. 
-
+    snapnum: Integer.  Required.
+        The snapshot number that corresponds to the snapshot key.
     """
 
     snapnum = ""
     reached_numbers = False
 
-    for letter in reversed(snap_key): # Go backwards through the key 
-        if (letter.isdigit() == True): # When a number is found,            
-            snapnum = "{0}{1}".format(snapnum, letter) # Concatenate that number with the others.
-            reached_numbers = True # Flag that we have encountered a cluster of numbers.
+    for letter in reversed(snap_key):  # Go backwards through the key 
+        if (letter.isdigit() == True):
+            # When a number is found, we concatenate it with the others and
+            # flag that we have encountered a cluster of numbers.
+            snapnum = "{0}{1}".format(snapnum, letter) 
+            reached_numbers = True 
 
-        if (letter.isdigit() == False): # When we eventually reach a letter that is not a number,
-            reached_numbers = False # Turn the flag off.
+        if (letter.isdigit() == False):
+            # When we reach something that's not a number, turn flag off. 
+            reached_numbers = False 
 
-        if (letter.isdigit() == True and reached_numbers == False): # But if we keep going back and encounter a number again, raise a Warning.
-            Warning("For Snapshot key '{0}' there were numbers that were not clustered together at the end of the key.\nWe assume the snapshot number corresponding to this key is {1}; please check that this is correct.".format(snap_key, int(snapnum))) 
+        # Now if we reach a number outside of the cluster at the end of the
+        # key, raise a warning that there were numbers ignored.
+        if (letter.isdigit() == True and reached_numbers == False): 
+            Warning("For Snapshot key '{0}' there were numbers that were not "
+                    "clustered together at the end of the key.\nWe assume the "
+                    "snapshot number corresponding to this key is {1}; please "
+                    "check that this is correct."
+                    .format(snap_key, int(snapnum))) 
     
-    snapnum = snapnum[::-1] # We searched backwards so flip the string around.
+    snapnum = snapnum[::-1]  # We searched backwards so flip the string around.
 
-    return int(snapnum) # Cast as integer before returning.
+    return int(snapnum)  # Cast as integer before returning.
 
 def index_to_temporalID(index, snapnum, index_mult_factor):
     """
-
-    Given a haloID local to a snapshot with number ``snapnum``, this function returns the ID that accounts for the snapshot number. 
+    Takes snapshot-local halo index and converts into temporally unique ID. 
     
     Parameters
     ----------
@@ -61,7 +70,8 @@ def index_to_temporalID(index, snapnum, index_mult_factor):
         Snapshot that the halo/s are/is located at.
 
     index_mult_factor: integer. Required
-        Factor to convert a the snapshot-unique halo index to a temporally-unique halo ID.
+        Factor to convert a the snapshot-unique halo index to a temporally 
+        unique halo ID.
  
     Returns
     ----------
@@ -77,9 +87,7 @@ def index_to_temporalID(index, snapnum, index_mult_factor):
 
 def get_snapkeys_and_nums(file_keys):
     """
-
-    Grabs the names of the snapshot keys and associated snapshot
-    numbers from a given set of keys.
+    Gets names of snapshot keys and snapshot numbers.
     
     We assume that the snapshot data keys are named to include the word
     "snap" (case insensitive). We also assume that the snapshot number
@@ -101,10 +109,9 @@ def get_snapkeys_and_nums(file_keys):
 
     Snap_Num: Dictionary of integers keyed by Snap_Keys.
         Snapshot number of each snapshot key. 
-
     """
 
-    Snap_Keys = [key for key in file_keys if (("SNAP" in key.upper()) == True)] 
+    Snap_Keys = [key for key in file_keys if ("SNAP" in key.upper())]
     Snap_Nums = dict() 
     for key in Snap_Keys: 
         Snap_Nums[key] = snap_key_to_snapnum(key) 
@@ -113,8 +120,7 @@ def get_snapkeys_and_nums(file_keys):
 
 def temporalID_to_snapnum(temporalID, index_mult_factor): 
     """
-
-    Given a temporalID, this function returns the snapshot number that corresponds to the ID. 
+    Given a temporalID, return the corresponding snapshot number. 
     
     Parameters
     ----------
@@ -122,26 +128,24 @@ def temporalID_to_snapnum(temporalID, index_mult_factor):
     ID: array-like of integers, or integer. Required.
         Array or single value that describes the temporalID/s. 
 
-    index_mult_factor: integer. Requied.
-        Factor to convert a the snapshot-unique halo index to a temporally-unique halo ID.
+    index_mult_factor: integer. Required.
+        Factor to convert to from temporally-unique halo ID to snap-shot unique
+        halo index.
          
     Returns
     ----------
 
     snapnum: array-like of integers, or integer. Required.    
-        Array or single value that contains the snapshot number corresponding to the temporal ID. 
+        Array or single value that contains the snapshot number corresponding to 
+        the temporal ID. 
     """
 
-    if (isinstance(temporalID, list)) or (type(temporalID).__module__ == np.__name__):
-        snapnum = (np.subtract(temporalID, 1) / index_mult_factor).astype(int)
-    else:        
-        snapnum = int((temporalID - 1) / index_mult_factor)
+    snapnum = int((temporalID - 1) / index_mult_factor)
 
     return snapnum
     
 def copy_group(file_in, file_out, key, opt):
     """
-
     Copies a group (and it's nested data-structure) within a HDF5 group into a new HDF5 file with the same data-structure.
  
     Parameters
@@ -160,7 +164,6 @@ def copy_group(file_in, file_out, key, opt):
     ----------
 
     None. 
-
     """
 
     group_path = file_in[key].parent.name # Get the name of the group path in the input file.

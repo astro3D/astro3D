@@ -8,7 +8,7 @@ import os
 import pytest
 
 from genesis.utils import forest_sorter as fs
-from genesis.utils import common as common 
+from genesis.utils import common as cmn 
 
 def parse_inputs():
     """
@@ -32,109 +32,160 @@ def parse_inputs():
     test_dir = os.path.dirname(__file__)
 
     parser.add_option("-f", "--fname_in", dest="fname_in", 
-                      help="Path to test HDF5 data. Default: {0}/test_data.hdf5".format(test_dir), 
+                      help="Path to test HDF5 data. Default: "
+                      "{0}/test_data.hdf5".format(test_dir), 
                       default="{0}/test_data.hdf5".format(test_dir))
     parser.add_option("-o", "--fname_out", dest="fname_out", 
                       help="Path to sorted output HDF5 data file. Default: "
                        "{0}/test_sorted.hdf5".format(test_dir),
                       default="{0}/test_sorted.hdf5".format(test_dir))
     parser.add_option("-n", "--NHalos_test", dest="NHalos_test", 
-                      help="Minimum number of halos to test using. Default: 10,000", 
-                      default = 10000, type = int) 
-    parser.add_option("-s", "--sort_id", dest="sort_id", 
-                      help="Field name for the ID key we are sorting on. Default: ForestID.",  
-                      default = "ForestID")
-    parser.add_option("-m", "--mass_def", dest="sort_mass", 
-                      help="Field name for the mass key we are sorting on. Default: Mass_200mean.", 
-                      default = "Mass_200mean")
+                      help="Minimum number of halos to test using. Default: " 
+                      "10,000", default = 10000, type = int)
+    parser.add_option("-s", "--sort_fields", dest="sort_fields", 
+                      help="Field names we will be sorted on. ORDER IS "
+                      "IMPORTANT.  Order using the outer-most sort to the "
+                      "inner-most. You MUST specify 4 fields to sort "
+                      "on (due to the limitations of the optionParser package)"  
+                      ".  If you wish to sort on less use None.  If you wish "
+                      "to sort on more, email jseiler@swin.edu.au.  Default: "
+                      "('ForestID', 'Mass_200mean', None, None)", 
+                      default = ("ForestID", "Mass_200mean", None, None),
+                      nargs = 4)
     parser.add_option("-i", "--HaloID", dest="halo_id", 
                       help="Field name for halo ID. Default: ID.", 
                       default = "ID")
     parser.add_option("-p", "--ID_fields", dest="ID_fields", 
-                      help="Field names for those that contain non-merger IDs.  Default: ('ID',"
-                      "Tail', 'Head').", default = ("ID", "Tail", "Head")) 
+                      help="Field names for those that contain non-merger."  
+                      "  Default: ('ID','Tail', 'Head').", 
+                      default = ("ID", "Tail", "Head")) 
     parser.add_option("-x", "--index_mult_factor", dest="index_mult_factor", 
-                      help="Conversion factor to go from a unique, per-snapshot halo index to a \
-                      temporally unique haloID.  Default: 1e12.", 
-                      default = 1e12)
+                      help="Conversion factor to go from a unique, "
+                      "snapshot-unique halo index temporally unique haloID.  " 
+                      "Default: 1e12.", default = 1e12)
 
     (opt, args) = parser.parse_args()
 
     # Print some useful startup info. #
     print("")
     print("Running test functions")
-    print("Performing tests on a minimum of {0} halos.".format(opt.NHalos_test))
-    print("The HaloID field for each halo is '{0}'.".format(opt.halo_id)) 
-    print("Sorting on the '{0}' field.".format(opt.sort_id))
-    print("Sub-Sorting on the '{0}' field.".format(opt.sort_mass))
+    print("Performing tests on a minimum of {0} halos."
+          .format(opt.NHalos_test))
+    print("The HaloID field for each halo is '{0}'.".format(opt.halo_id))
+    print("Sorting on the {0} fields".format(opt.sort_fields))
     print("")
 
     return opt
 
-def my_test_sorted_order(opt):
-    """
 
-    Checks the indices of the sorted output file to ensure that the sorting has been performed
-    correctly. 
+def recursively_check_sort(snapshot_data, opt, sort_level, halo_idx):
+    """
+    Moves through the sort level, checking that each key was sorted.
 
     Parameters
     ----------
 
-    opt: Dictionary.  
+    snapshot_data: HDF5 File. Required. 
+        Snapshot data that we are checking.  The fields of this are the halo
+        properties for the snapshot. 
+
+    opt: Dictionary. Required.
+        Dictionary containing the option parameters specified at runtime.  
+        Used to get the sorting fields. 
+
+    sort_level: Integer. Required.
+        The sort level that we are currently on.  Used to get the sort key.
+
+    halo_idx: Integer. Required.
+        Index of the halo we are comparing.
+
+    Returns
+    ----------
+
+    None. ``Pytest.fail()`` is invoked if the test fails. 
+    """
+
+    # Our checking goes from outer-most to inner-most.  If the user didn't want
+    # to sort on 4 fields and used None, then we stop recursively calling. 
+    key = opt["sort_fields"][sort_level]
+    if key is None or "NONE" in key.upper():        
+        return 
+
+    this_value = snapshot_data[key][halo_idx]
+    this_id = snapshot_data[key][halo_idx]
+
+    next_value = snapshot_data[key][halo_idx + 1]
+    next_id = snapshot_data[key][halo_idx]
+
+    # If the values are equal, we need to move to the next sort level.  However
+    # if we're currently at the inner-most level then the sorting is still done
+    # correctly (equal values next to each other). 
+    if this_value == next_value \
+       and sort_level < (len(opt["sort_fields"]) - 1): 
+        recursively_check_sort(snapshot_data, opt, sort_level + 1,
+                               halo_idx)
+
+    # Otherwise if we haven't sorted correctly in ascended order, print a
+    # message and fail the test.        
+    elif this_value > next_value:
+        print("For Halo ID {0} we had a {1} value of {2}.  After sorting "
+              "via lexsort using the fields {3} (inner-most sort first), " 
+              "the next in the sorted list has ID {4} and a {1} value of {5}"
+              .format(this_id, key, this_id, opt["sort_fields"],
+                      next_id, key, next_id))
+
+        cleanup(opt)
+        pytest.fail() 
+               
+    return 
+
+def my_test_sorted_order(opt):
+    """
+    Checks the indices of the output file to ensure sorting order is correct.
+
+    Calls ``recursively_check_sort`` for each halo which iterates through the
+    sorted fields to ensure all the sorted is correct.
+
+    Parameters
+    ----------
+
+    opt: Dictionary. Required. 
         Dictionary containing the option parameters specified at runtime.  
         Used to get file name and sorting fields. 
 
     Returns
     ----------
 
-    None. ``Pytest.fail()`` is invoked if the test fails. 
-
+    None. ``Pytest.fail()`` is invoked by ``recursively_check_sort`` if the
+    test fails.
     """
 
     with h5py.File(opt["fname_out"], "r") as f_in:
            
-        Snap_Keys, Snap_Nums = common.get_snapkeys_and_nums(f_in.keys())
+        Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
         for snap_key in Snap_Keys:
             NHalos = len(f_in[snap_key][opt["halo_id"]])
             if NHalos < 2:  # Skip snapshots that wouldn't be sorted. 
                 continue
  
+            # Since the user specifies 4 keys that they wish to sort on (with
+            # some these potentially being None), we need to check that every
+            # key has been sorted correctly.
+            #
+            # To do this we loop over the halos within a snapshot and first
+            # check the outer-most key.  If halo[i] has the same outer-key as
+            # halo[i + 1] we need to check an inner-key to ensure it's sorted. 
+
             for idx in range(NHalos - 1):
-                halo_id = f_in[snap_key][opt["halo_id"]][idx]
-                halo_id_next = f_in[snap_key][opt["halo_id"]][idx + 1]
-
-                outer_sort = f_in[snap_key][opt["sort_id"]][idx]
-                outer_sort_next = f_in[snap_key][opt["sort_id"]][idx + 1]
-
-                inner_sort = f_in[snap_key][opt["sort_mass"]][idx]
-                inner_sort_next = f_in[snap_key][opt["sort_mass"]][idx + 1]
-                
-                if (outer_sort > outer_sort_next):
-                    print("For Halo ID {0} we had a {1} of {2}.  After sorting via lexsort with "
-                          "outer-key {1}, the next Halo has ID {3} and a {1} of {4}".format(halo_id, 
-                          opt["sort_id"], outer_sort, halo_id_next, outer_sort_next))
-                    print("Since we are sorting using {0} they MUST be in ascending order.".format(opt["sort_id"]))
-
-                    cleanup(opt)
-                    pytest.fail()
-
-                if (outer_sort == outer_sort_next):
-                    if (inner_sort > inner_sort_next):
-                        print("For Halo ID {0} we had a {1} of {2}.  After sorting via lexsort "
-                              "inner-key {1}, the next Halo has ID {3} and a {1} of {4}"
-                              .format(halo_id, opt["sort_mass"], inner_sort, halo_id_next,
-                              inner_sort_next))
-                        print("Since we are sorting using {0} they MUST be in ascending "
-                              "order.".format(opt["sort_mass"]))
-
-                        cleanup(opt)
-                        pytest.fail()
+                recursively_check_sort(f_in[snap_key], opt, 0, idx)
  
 def my_test_check_haloIDs(opt):
     """
-    
-    This test checks the passed haloIDs and snapshot number to ensure the haloIDs match the given formula.
+    Checks the sorted haloIDs and snapshot numbers match the formula.           
+
+    This formula is the one that turns the snapshot-local halo index into a
+    temporally unique ID.
  
     Parameters
     ----------
@@ -154,14 +205,14 @@ def my_test_check_haloIDs(opt):
 
     for file_to_test in files: 
         with h5py.File(file_to_test, "r") as f_in:
-            Snap_Keys, Snap_Nums = common.get_snapkeys_and_nums(f_in.keys())
+            Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
         
             for snap_key in Snap_Keys:
                 if len(f_in[snap_key][opt["halo_id"]]) == 0:  # Skip empty snapshots. 
                     continue
 
                 file_haloIDs = f_in[snap_key][opt["halo_id"]][:] 
-                generated_haloIDs = common.index_to_temporalID(np.arange(len(file_haloIDs)), 
+                generated_haloIDs = cmn.index_to_temporalID(np.arange(len(file_haloIDs)), 
                                                                      Snap_Nums[snap_key],
                                                                      opt["index_mult_factor"])
     
@@ -201,7 +252,7 @@ def my_test_sorted_properties(opt):
   
     with h5py.File(opt["fname_in"], "r") as f_in, h5py.File(opt["fname_out"], "r") as f_out:
            
-        Snap_Keys, Snap_Nums = common.get_snapkeys_and_nums(f_out.keys())
+        Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_out.keys())
  
         for snap_key in Snap_Keys:  # Now let's check each field.
             for field in f_out[snap_key]:
@@ -265,13 +316,13 @@ def create_test_input_data(opt):
         Snap_Keys = [key for key in f_in.keys() if (("SNAP" in key.upper()) == True)] 
         Snap_Nums = dict() 
         for key in Snap_Keys: 
-            Snap_Nums[key] = common.snap_key_to_snapnum(key) 
+            Snap_Nums[key] = cmn.snap_key_to_snapnum(key) 
 
         for snap_key in Snap_Keys:
             if len(f_in[snap_key][opt["halo_id"]]) == 0:  # Skip empty snapshots. 
                 continue
         
-            common.copy_group(f_in, f_out, snap_key, opt)
+            cmn.copy_group(f_in, f_out, snap_key, opt)
             NHalos += len(f_in[snap_key][opt["halo_id"]])
 
             if NHalos >= opt["NHalos_test"]:
