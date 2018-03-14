@@ -43,7 +43,6 @@ def parse_inputs():
                       "('ForestID', 'Mass_200mean', None, None)", 
                       default = ("ForestID", "Mass_200mean", None, None),
                       nargs = 4)
-    parser.add_option("-m", "--mass_def", dest="sort_mass", help="Field name for the mass key we are sorting on. Default: Mass_200mean.", default = "Mass_200mean")
     parser.add_option("-i", "--HaloID", dest="halo_id", help="Field name for halo ID. Default: ID.", default = "ID")
     parser.add_option("-p", "--ID_fields", dest="ID_fields", help="Field names for those that contain IDs.  Default: ('ID', 'Tail', 'Head', 'NextSubHalo', 'Dummy1', 'Dumm2').", default = ("ID", "Tail", "Head", "NextSubHalo", "Dummy", "Dummy")) 
     parser.add_option("-x", "--index_mult_factor", dest="index_mult_factor", help="Conversion factor to go from a unique, per-snapshot halo index to a temporally unique haloID.  Default: 1e12.", default = 1e12)

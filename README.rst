@@ -58,18 +58,29 @@ If you are running with different a merger tree format, we strongly recommend th
 testing script with your data.  The field name command line arguments required for running the 
 testing case and ``forest_sorter.py`` are identical.  
 
+When specifying multiple arugments for an option (e.g., for ``sort_fields``),
+use the following syntax: 
+
+``$ python3 forest_sorter.py -s ForestID None None None``
+
+or
+
+``$ python3 forest_sorter.py --sort_fields=ForestID None None None`` 
+
 Options:
   -h, --help            show this help message and exit
   -f FNAME_IN, --fname_in=FNAME_IN
                         Path to the input HDF5 data file. Required.
   -o FNAME_OUT, --fname_out=FNAME_OUT
                         Path to the output HDF5 data file. Required.
-  -s SORT_ID, --sort_id=SORT_ID
-                        Field name for the ID key we are sorting on. Default:
-                        ForestID.
-  -m SORT_MASS, --mass_def=SORT_MASS
-                        Field name for the mass key we are sorting on.
-                        Default: Mass_200mean.
+  -s SORT_FIELDS, --sort_fields=SORT_FIELDS
+                        Field names we will be sorted on. ORDER IS IMPORTANT.
+                        Order using the outer-most sort to the inner-most. You
+                        MUST specify 4 fields to sort on (due to the
+                        limitations of the optionParser package).  If you wish
+                        to sort on less use None.  If you wish to sort on
+                        more, email jseiler@swin.edu.au.  Default:
+                        ('ForestID', 'Mass_200mean', None, None)
   -i HALO_ID, --HaloID=HALO_ID
                         Field name for halo ID. Default: ID.
   -p ID_FIELDS, --ID_fields=ID_FIELDS
