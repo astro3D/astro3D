@@ -13,7 +13,6 @@ from genesis.utils import common as cmn
 
 def parse_inputs():
     """
-
     Parses the command line input arguments.
 
     Parameters
@@ -202,7 +201,6 @@ def my_test_check_haloIDs(opt):
     ----------
 
     None. ``Pytest.fail()`` is invoked if the test fails.
-
     """
 
     files = [opt["fname_in"], opt["fname_out"]]
@@ -235,7 +233,6 @@ def my_test_check_haloIDs(opt):
 
 def my_test_sorted_properties(opt):
     """
-
     Ensures that the halo properties were sorted and saved properly.
 
     Note: The non-ID fields are not checked here because they are
@@ -254,7 +251,6 @@ def my_test_sorted_properties(opt):
     ----------
 
     True if test passes, False otherwise.
-
     """
 
     with h5py.File(opt["fname_in"], "r") as f_in, \
@@ -317,7 +313,6 @@ def create_test_input_data(opt):
 
     fname_out: String.
         The path to the small copied data file.
-
     """
 
     fname_out = "{0}/my_test_data.hdf5"
@@ -367,7 +362,6 @@ def cleanup(opt):
     ----------
 
     None
-
     """
 
     if "-f" in sys.argv:  # Don't delete the default input data.
@@ -388,7 +382,6 @@ def test_run():
     ----------
 
     None.
-
     """
 
     opt = parse_inputs()

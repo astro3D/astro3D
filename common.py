@@ -141,7 +141,7 @@ def temporalID_to_snapnum(temporalID, index_mult_factor):
         to the temporal ID.
     """
 
-    snapnum = int((temporalID - 1) / index_mult_factor)
+    snapnum = ((temporalID - 1) / index_mult_factor).astype(int)
 
     return snapnum
 

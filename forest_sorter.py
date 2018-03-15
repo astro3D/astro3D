@@ -218,13 +218,15 @@ def sort_and_write_file(opt):
                     continue
 
                 if field in opt["ID_fields"]:  # If this field has an ID...
+                    # Need to get the oldIDs, find the snapshot they correspond
+                    # to and then get the newIDs using our dictionary.
                     newID = np.empty((NHalos))
-                    for idx in range(NHalos):  # Loop through each halo.
-                        oldID = f_in[key][field][idx]
-                        snapnum = cmn.temporalID_to_snapnum(oldID,
-                                                            opt["index_mult_factor"])
-                        newID[idx] = int(ID_maps[snapnum][oldID])
-                    to_write = newID  # Remember what we need to write.
+                    oldID = f_in[key][field][:]
+                    snapnum = cmn.temporalID_to_snapnum(oldID,
+                                                        opt["index_mult_factor"])
+                    newID = [ID_maps[snap][ID] for snap, ID in zip(snapnum,
+                                                                   oldID)]
+                    to_write = np.array(newID)  # Remember what we need to write.
                 else:
                     to_write = f_in[key][field][:]
 
@@ -232,8 +234,6 @@ def sort_and_write_file(opt):
                 # correct order.
                 f_out[key][field][:] = to_write[snapshot_indices[key]]
 
-#            if count > 20:
-#                break
         end_time = time.time()
         print("Writing of snapshots took {0:3f} seconds".
               format(end_time - start_time))
