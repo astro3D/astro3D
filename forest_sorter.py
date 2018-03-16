@@ -3,8 +3,7 @@ from __future__ import print_function
 import numpy as np
 import h5py
 from tqdm import tqdm
-from optparse import OptionParser
-
+import argparse
 import time
 
 from genesis.utils import common as cmn
@@ -25,67 +24,69 @@ def parse_inputs():
     Returns
     ----------
 
-    opt: optparse.Values.  Required.
-        Values from the OptionParser package.  Values are accessed through
-        ``opt.Value`` and cast into a dictionary using ``vars(opt)``.
+    args: Dictionary.  Required.
+        Dictionary of arguments from the ``argparse`` package.
+        Dictionary is keyed by the argument name (e.g., args['fname_in']).
     """
 
-    parser = OptionParser()
+    parser = argparse.ArgumentParser()
 
-    parser.add_option("-f", "--fname_in", dest="fname_in",
+    parser.add_argument("-f", "--fname_in", dest="fname_in",
                       help="Path to the input HDF5 data file. Required.")
-    parser.add_option("-o", "--fname_out", dest="fname_out",
+    parser.add_argument("-o", "--fname_out", dest="fname_out",
                       help="Path to the output HDF5 data file. Required.")
-    parser.add_option("-s", "--sort_fields", dest="sort_fields",
+    parser.add_argument("-s", "--sort_fields", dest="sort_fields",
                       help="Field names we will be sorted on. ORDER IS "
                       "IMPORTANT.  Order using the outer-most sort to the "
-                      "inner-most. You MUST specify 4 fields to sort "
-                      "on (due to the limitations of the optionParser package)"
-                      ".  If you wish to sort on less use None.  If you wish "
-                      "to sort on more, email jseiler@swin.edu.au.  Default: "
-                      "('ForestID', 'Mass_200mean', None, None)",
-                      default=("ForestID", "Mass_200mean", None, None),
-                      nargs=4)
-    parser.add_option("-i", "--HaloID", dest="halo_id",
+                      "inner-most.  Separate each field name with a comma. "
+                      "Default: ForestID,Mass_200mean.",
+                      default="ForestID,Mass_200mean")
+    parser.add_argument("-i", "--HaloID", dest="halo_id",
                       help="Field name for halo ID. Default: ID.",
                       default="ID")
-    parser.add_option("-p", "--ID_fields", dest="ID_fields",
-                      help="Field names for those that contain IDs.  Default: "
-                      "('ID', 'Tail', 'Head', 'NextSubHalo', 'Dummy1', "
-                      "'Dumm2').",
-                      default=('ID', 'Tail', 'Head', 'NextSubHalo', 'Dummy',
-                               'Dummy'))
-    parser.add_option("-x", "--index_mult_factor", dest="index_mult_factor",
+    parser.add_argument("-p", "--ID_fields", dest="ID_fields",
+                      help="Field names for those that contain IDs.  Separate "
+                      "field names with a comma. " 
+                      "Default: ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).",
+                      default=("ID,Tail,Head,NextSubHalo,Dummy,Dummy"))
+    parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
                       help="Conversion factor to go from a unique, "
                       "per-snapshot halo index to a temporally unique haloID. "
                       "Default: 1e12.", default=1e12)
 
-    (opt, args) = parser.parse_args()
+    args = parser.parse_args()
 
     # We require an input file and an output one.
-    if (opt.fname_in is None or opt.fname_out is None):
+    if (args.fname_in is None or args.fname_out is None):
         parser.print_help()
         raise RuntimeError
+    
+    # We allow the user to enter an arbitrary number of sort fields and fields
+    # that contain IDs.  They are etnered as a single string separated by
+    # commas so need to split them up into a list.
+    args.ID_fields = (args.ID_fields).split(',')
+    args.sort_fields = args.sort_fields.split(',')
 
     # Print some useful startup info. #
     print("")
-    print("The HaloID field for each halo is '{0}'.".format(opt.halo_id))
-    print("Sorting on the '{0}' fields".format(opt.sort_fields))
+    print("The HaloID field for each halo is '{0}'.".format(args.halo_id))
+    print("Sorting on the {0} fields".format(args.sort_fields))
+    print("The fields that contain IDs are {0}".format(args.ID_fields))
     print("")
 
-    return opt
+    return vars(args) 
 
 
-def get_sort_indices(file_in, snap_key, opt):
+def get_sort_indices(file_in, snap_key, args):
     """
     Gets the indices that will sort the HDF5 file.
 
-    This sorting uses the fields provided by the user in opt. The sort fields
+    This sorting uses the fields provided by the user in args. The sort fields
     (or sort keys) we ordered such that the first key will peform the
     outer-most sort and the last key will perform the inner-most sort.
 
     Example:
-        opt["sort_fields"] = ("ForestID", "Mass_200mean")
+        args["sort_fields"] = ("ForestID", "Mass_200mean")
         ForestID = [1, 4, 39, 1, 1, 4]
         Mass_200mean = [4e9, 10e10, 8e8, 7e9, 3e11, 5e6]
 
@@ -101,8 +102,8 @@ def get_sort_indices(file_in, snap_key, opt):
     snap_key: String.  Required.
         The field name for the snapshot we are accessing.
 
-    opt: Dictionary.  Required.
-        Dictionary containing the option parameters specified at runtime.
+    args: Dictionary.  Required.
+        Dictionary containing the argsion parameters specified at runtime.
         Used to specify the field names we are sorting on.
 
     Returns
@@ -114,7 +115,7 @@ def get_sort_indices(file_in, snap_key, opt):
     """
 
     sort_keys = []
-    for key in reversed(opt["sort_fields"]):
+    for key in reversed(args["sort_fields"]):
         if key is None or "NONE" in key.upper():
             continue
         sort_keys.append(file_in[snap_key][key])
@@ -124,9 +125,9 @@ def get_sort_indices(file_in, snap_key, opt):
     return indices
 
 
-def sort_and_write_file(opt):
+def sort_and_write_file(args):
     """
-    Using the options specified by the command line, sorts the HDF5
+    Using the argsions specified by the command line, sorts the HDF5
     file by the specified ID field and then sub-sorts by the specified
     mass field.
 
@@ -135,7 +136,7 @@ def sort_and_write_file(opt):
     Parameters
     ----------
 
-    opt: Dictionary.  Required.
+    args: Dictionary.  Required.
         Contains the runtime variables such as input/output file names
         and fields required for sorting.
         For full contents of the dictionary refer to ``parse_inputs``.
@@ -146,8 +147,8 @@ def sort_and_write_file(opt):
     None.
     """
 
-    with h5py.File(opt["fname_in"], "r") as f_in, \
-         h5py.File(opt["fname_out"], "w") as f_out:
+    with h5py.File(args["fname_in"], "r") as f_in, \
+         h5py.File(args["fname_out"], "w") as f_out:
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
@@ -160,15 +161,15 @@ def sort_and_write_file(opt):
         start_time = time.time()
         for snap_key in tqdm(Snap_Keys):
             # We only want to go through snapshots that contain halos.
-            if len(f_in[snap_key][opt["halo_id"]]) == 0:
+            if len(f_in[snap_key][args["halo_id"]]) == 0:
                 continue
 
             # Need to get the indices that sort the data according to the
             # specified keys.
 
-            indices = get_sort_indices(f_in, snap_key, opt)
+            indices = get_sort_indices(f_in, snap_key, args)
 
-            old_haloIDs = f_in[snap_key][opt["halo_id"]][:]
+            old_haloIDs = f_in[snap_key][args["halo_id"]][:]
             old_haloIDs_sorted = old_haloIDs[indices]
 
             # The ID of a halo depends on its snapshot-local index.
@@ -176,7 +177,7 @@ def sort_and_write_file(opt):
             # simply be np.arange(len(Number of Halos)).
             new_haloIDs = cmn.index_to_temporalID(np.arange(len(indices)),
                                                   Snap_Nums[snap_key],
-                                                  opt["index_mult_factor"])
+                                                  args["index_mult_factor"])
 
             oldIDs_to_newIDs = dict(zip(old_haloIDs_sorted, new_haloIDs))
 
@@ -205,25 +206,25 @@ def sort_and_write_file(opt):
         start_time = time.time()
 
         for count, key in enumerate(tqdm(f_in.keys())):
-            cmn.copy_group(f_in, f_out, key, opt)
+            cmn.copy_group(f_in, f_out, key, args)
             for field in f_in[key]:
 
                 # Some keys (e.g., 'Header') don't have snapshots so need an
                 # except to catch this.
                 try:
-                    NHalos = len(f_in[key][opt["halo_id"]])
+                    NHalos = len(f_in[key][args["halo_id"]])
                     if (NHalos == 0):
                         continue
                 except KeyError:
                     continue
 
-                if field in opt["ID_fields"]:  # If this field has an ID...
+                if field in args["ID_fields"]:  # If this field has an ID...
                     # Need to get the oldIDs, find the snapshot they correspond
                     # to and then get the newIDs using our dictionary.
                     newID = np.empty((NHalos))
                     oldID = f_in[key][field][:]
                     snapnum = cmn.temporalID_to_snapnum(oldID,
-                                                        opt["index_mult_factor"])
+                                                        args["index_mult_factor"])
                     newID = [ID_maps[snap][ID] for snap, ID in zip(snapnum,
                                                                    oldID)]
                     to_write = np.array(newID)  # Remember what we need to write.
@@ -243,5 +244,5 @@ def sort_and_write_file(opt):
 
 if __name__ == '__main__':
 
-    opt = parse_inputs()
-    sort_and_write_file(vars(opt))
+    args = parse_inputs()
+    sort_and_write_file(args)
