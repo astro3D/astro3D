@@ -56,38 +56,38 @@ changed, you will need to specify more command line arguments at execution.
 
 If you are running with different a merger tree format, we strongly recommend that you run the
 testing script with your data.  The field name command line arguments required for running the 
-testing case and ``forest_sorter.py`` are identical.  
+testing case and ``forest_sorter.py`` are identical. 
 
 When specifying multiple arugments for an option (e.g., for ``sort_fields``),
-use the following syntax: 
+use a comma to separate the arguments **with no white space**.  E.g.,
 
-``$ python3 forest_sorter.py -s ForestID None None None``
+``$ python3 forest_sorter.py -s ForestID,Mass_200mean,NextSubhalo``
 
 or
 
-``$ python3 forest_sorter.py --sort_fields=ForestID None None None`` 
+``$ python3 forest_sorter.py --sort_fields=ForestID,Mass_200mean,NextSubhalo`` 
 
-Options:
+usage: forest_sorter.py [-h] [-f FNAME_IN] [-o FNAME_OUT] [-s SORT_FIELDS]
+                        [-i HALO_ID] [-p ID_FIELDS] [-x INDEX_MULT_FACTOR]
+
+optional arguments:
   -h, --help            show this help message and exit
-  -f FNAME_IN, --fname_in=FNAME_IN
+  -f FNAME_IN, --fname_in FNAME_IN
                         Path to the input HDF5 data file. Required.
-  -o FNAME_OUT, --fname_out=FNAME_OUT
+  -o FNAME_OUT, --fname_out FNAME_OUT
                         Path to the output HDF5 data file. Required.
-  -s SORT_FIELDS, --sort_fields=SORT_FIELDS
+  -s SORT_FIELDS, --sort_fields SORT_FIELDS
                         Field names we will be sorted on. ORDER IS IMPORTANT.
-                        Order using the outer-most sort to the inner-most. You
-                        MUST specify 4 fields to sort on (due to the
-                        limitations of the optionParser package).  If you wish
-                        to sort on less use None.  If you wish to sort on
-                        more, email jseiler@swin.edu.au.  Default:
-                        ('ForestID', 'Mass_200mean', None, None)
-  -i HALO_ID, --HaloID=HALO_ID
+                        Order using the outer-most sort to the inner-most.
+                        Separate each field name with a comma. Default:
+                        ForestID,Mass_200mean.
+  -i HALO_ID, --HaloID HALO_ID
                         Field name for halo ID. Default: ID.
-  -p ID_FIELDS, --ID_fields=ID_FIELDS
-                        Field names for those that contain IDs.  Default:
-                        ('ID', 'Tail', 'Head', 'NextSubHalo', 'Dummy1',
-                        'Dumm2').
-  -x INDEX_MULT_FACTOR, --index_mult_factor=INDEX_MULT_FACTOR
+  -p ID_FIELDS, --ID_fields ID_FIELDS
+                        Field names for those that contain IDs. Separate field
+                        names with a comma. Default:
+                        ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).
+  -x INDEX_MULT_FACTOR, --index_mult_factor INDEX_MULT_FACTOR
                         Conversion factor to go from a unique, per-snapshot
-                        halo index to a temporally unique haloID.  Default:
+                        halo index to a temporally unique haloID. Default:
                         1e12.

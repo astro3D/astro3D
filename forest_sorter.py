@@ -32,27 +32,27 @@ def parse_inputs():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-f", "--fname_in", dest="fname_in",
-                      help="Path to the input HDF5 data file. Required.")
+                        help="Path to the input HDF5 data file. Required.")
     parser.add_argument("-o", "--fname_out", dest="fname_out",
-                      help="Path to the output HDF5 data file. Required.")
+                        help="Path to the output HDF5 data file. Required.")
     parser.add_argument("-s", "--sort_fields", dest="sort_fields",
-                      help="Field names we will be sorted on. ORDER IS "
-                      "IMPORTANT.  Order using the outer-most sort to the "
-                      "inner-most.  Separate each field name with a comma. "
-                      "Default: ForestID,Mass_200mean.",
-                      default="ForestID,Mass_200mean")
+                        help="Field names we will be sorted on. ORDER IS "
+                        "IMPORTANT.  Order using the outer-most sort to the "
+                        "inner-most.  Separate each field name with a comma. "
+                        "Default: ForestID,Mass_200mean.",
+                        default="ForestID,Mass_200mean")
     parser.add_argument("-i", "--HaloID", dest="halo_id",
-                      help="Field name for halo ID. Default: ID.",
-                      default="ID")
+                        help="Field name for halo ID. Default: ID.",
+                        default="ID")
     parser.add_argument("-p", "--ID_fields", dest="ID_fields",
-                      help="Field names for those that contain IDs.  Separate "
-                      "field names with a comma. " 
-                      "Default: ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).",
-                      default=("ID,Tail,Head,NextSubHalo,Dummy,Dummy"))
+                        help="Field names for those that contain IDs.  "
+                        "Separate field names with a comma. "
+                        "Default: ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).",
+                        default=("ID,Tail,Head,NextSubHalo,Dummy,Dummy"))
     parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
-                      help="Conversion factor to go from a unique, "
-                      "per-snapshot halo index to a temporally unique haloID. "
-                      "Default: 1e12.", default=1e12)
+                        help="Conversion factor to go from a unique, "
+                        "per-snapshot halo index to a temporally unique haloID. "
+                        "Default: 1e12.", default=1e12)
 
     args = parser.parse_args()
 
@@ -60,7 +60,7 @@ def parse_inputs():
     if (args.fname_in is None or args.fname_out is None):
         parser.print_help()
         raise RuntimeError
-    
+
     # We allow the user to enter an arbitrary number of sort fields and fields
     # that contain IDs.  They are etnered as a single string separated by
     # commas so need to split them up into a list.
@@ -74,7 +74,7 @@ def parse_inputs():
     print("The fields that contain IDs are {0}".format(args.ID_fields))
     print("")
 
-    return vars(args) 
+    return vars(args)
 
 
 def get_sort_indices(file_in, snap_key, args):

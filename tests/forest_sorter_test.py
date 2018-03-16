@@ -35,31 +35,31 @@ def parse_inputs():
     test_dir = os.path.dirname(__file__)
 
     parser.add_argument("-f", "--fname_in", dest="fname_in",
-                      help="Path to test HDF5 data. Default: "
-                      "{0}/test_data.hdf5".format(test_dir),
-                      default="{0}/test_data.hdf5".format(test_dir))
+                        help="Path to test HDF5 data. Default: "
+                        "{0}/test_data.hdf5".format(test_dir),
+                        default="{0}/test_data.hdf5".format(test_dir))
     parser.add_argument("-o", "--fname_out", dest="fname_out",
-                      help="Path to sorted output HDF5 data file. "
-                      "Default: {0}/test_sorted.hdf5".format(test_dir),
-                      default="{0}/test_sorted.hdf5".format(test_dir))
+                        help="Path to sorted output HDF5 data file. "
+                        "Default: {0}/test_sorted.hdf5".format(test_dir),
+                        default="{0}/test_sorted.hdf5".format(test_dir))
     parser.add_argument("-s", "--sort_fields", dest="sort_fields",
-                      help="Field names we will be sorted on. ORDER IS "
-                      "IMPORTANT.  Order using the outer-most sort to the "
-                      "inner-most.  Separate each field name with a comma. "
-                      "Default: ForestID,Mass_200mean.",
-                      default="ForestID,Mass_200mean")
+                        help="Field names we will be sorted on. ORDER IS "
+                        "IMPORTANT.  Order using the outer-most sort to the "
+                        "inner-most.  Separate each field name with a comma. "
+                        "Default: ForestID,Mass_200mean.",
+                        default="ForestID,Mass_200mean")
     parser.add_argument("-i", "--HaloID", dest="halo_id",
-                      help="Field name for halo ID. Default: ID.",
-                      default="ID")
+                        help="Field name for halo ID. Default: ID.",
+                        default="ID")
     parser.add_argument("-p", "--ID_fields", dest="ID_fields",
-                      help="Field names for those that contain IDs.  Separate "
-                      "field names with a comma. " 
-                      "Default: ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).",
-                      default=("ID,Tail,Head,NextSubHalo,Dummy,Dummy"))
+                        help="Field names for those that contain IDs.  Separate "
+                        "field names with a comma. "
+                        "Default: ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).",
+                        default=("ID,Tail,Head,NextSubHalo,Dummy,Dummy"))
     parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
-                      help="Conversion factor to go from a unique, "
-                      "per-snapshot halo index to a temporally unique haloID. "
-                      "Default: 1e12.", default=1e12)
+                        help="Conversion factor to go from a unique, "
+                        "per-snapshot halo index to a temporally unique haloID. "
+                        "Default: 1e12.", default=1e12)
     parser.add_argument("-n", "--NHalos_test", dest="NHalos_test",
                         help="Minimum number of halos to test. Default: "
                         "10,000", default=10000, type=int)
@@ -76,12 +76,13 @@ def parse_inputs():
     print("")
     print("Running test functions")
     print("Performing tests on a minimum of {0} halos."
-           .format(args.NHalos_test))    
+          .format(args.NHalos_test))
     print("The HaloID field for each halo is '{0}'.".format(args.halo_id))
     print("Sorting on the {0} fields".format(args.sort_fields))
     print("")
 
-    return vars(args) 
+    return vars(args)
+
 
 def recursively_check_sort(snapshot_data, args, sort_level, halo_idx):
     """
