@@ -139,9 +139,31 @@ def temporalID_to_snapnum(temporalID, index_mult_factor):
     snapnum: array-like of integers, or integer. Required.
         Array or single value that contains the snapshot number corresponding
         to the temporal ID.
-    """
 
-    snapnum = ((temporalID - 1) / index_mult_factor).astype(int)
+    Examples:
+
+        >>> temporalID_to_snapnum(-1, 1e12)
+        0
+
+        >>> temporalID_to_snapnum(18000000000001, 1e12)
+        18
+
+        #>>> test_list = [18000000000001, 20000000000050, 134000000000005] 
+        #>>> temporalID_to_snapnum(test_list, 1e12)
+        #array([ 18,  20, 134]) 
+
+
+        >>> import numpy as np
+        >>> test_array = np.array([20000000000050, 134000000000005]) 
+        >>> temporalID_to_snapnum(test_array, 1e12)
+        array([ 20, 134])
+
+    """
+    import numpy as np
+    if isinstance(temporalID, list) or isinstance(temporalID, np.ndarray):       
+        snapnum = ((np.subtract(temporalID,1)) / index_mult_factor).astype(int)
+    else:
+        snapnum = int((temporalID - 1) / index_mult_factor)
 
     return snapnum
 
@@ -174,3 +196,9 @@ def copy_group(file_in, file_out, key, opt):
     group_id = file_out.require_group(group_path)  # Create the group.
     name = "{0}".format(key)  # Name the group.
     file_in.copy(name, group_id, name=key)  # Copy over the data.
+
+if __name__ == "__main__":
+    import doctest
+
+    import numpy as np
+    doctest.testmod()

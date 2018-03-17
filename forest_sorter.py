@@ -47,8 +47,10 @@ def parse_inputs():
     parser.add_argument("-p", "--ID_fields", dest="ID_fields",
                         help="Field names for those that contain IDs.  "
                         "Separate field names with a comma. "
-                        "Default: ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).",
-                        default=("ID,Tail,Head,NextSubHalo,Dummy,Dummy"))
+                        "Default: ID,Tail,Head,NextProgenitor,NextSubhalo,"
+                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail",
+                        default=("ID,Tail,Head,NextProgenitor,NextSubHalo,"
+                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail"))
     parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
                         help="Conversion factor to go from a unique, "
                         "per-snapshot halo index to a temporally unique haloID. "
@@ -189,6 +191,13 @@ def sort_and_write_file(args):
             snapshot_indices[snap_key] = indices
             ID_maps[Snap_Nums[snap_key]] = oldIDs_to_newIDs
 
+        # For some ID fields (e.g., NextProgenitor), the value is -1.  When we
+        # convert the temporalID to a Snapshot number, the operation we do is
+        # +1 * mult_factor.
+        # If the ID is -1 the 'Snapshot number' will be 0.  We want to preserve
+        # these -1 so we map to itself.
+        ID_maps[0] = {-1:-1}
+
         end_time = time.time()
         print("Creation of dictionary map took {0:3f} seconds"
               .format(end_time - start_time))
@@ -205,7 +214,7 @@ def sort_and_write_file(args):
         print("Now writing out the snapshots in the sorted order.")
         start_time = time.time()
 
-        for count, key in enumerate(tqdm(f_in.keys())):
+        for key in tqdm(f_in.keys()):
             cmn.copy_group(f_in, f_out, key, args)
             for field in f_in[key]:
 
