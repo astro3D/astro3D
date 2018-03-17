@@ -49,7 +49,7 @@ def parse_inputs():
                         "Separate field names with a comma. "
                         "Default: ID,Tail,Head,NextProgenitor,NextSubhalo,"
                         "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail",
-                        default=("ID,Tail,Head,NextProgenitor,NextSubHalo,"
+                        default=("ID,Tail,Head,NextProgenitor,NextSubhalo,"
                         "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail"))
     parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
                         help="Conversion factor to go from a unique, "
@@ -229,8 +229,7 @@ def sort_and_write_file(args):
 
                 if field in args["ID_fields"]:  # If this field has an ID...
                     # Need to get the oldIDs, find the snapshot they correspond
-                    # to and then get the newIDs using our dictionary.
-                    newID = np.empty((NHalos))
+                    # to and then get the newIDs using our dictionary.                
                     oldID = f_in[key][field][:]
                     snapnum = cmn.temporalID_to_snapnum(oldID,
                                                         args["index_mult_factor"])
