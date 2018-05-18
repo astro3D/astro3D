@@ -255,7 +255,7 @@ def my_test_sorted_properties(args):
     Returns
     ----------
 
-    True if test passes, False otherwise.
+    None. ``Pytest.fail()`` is invoked if the test fails.
     """
 
     with h5py.File(args["fname_in"], "r") as f_in, \

@@ -48,9 +48,9 @@ def parse_inputs():
                         help="Field names for those that contain IDs.  "
                         "Separate field names with a comma. "
                         "Default: ID,Tail,Head,NextProgenitor,NextSubhalo,"
-                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail",
+                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail,hostHaloID",
                         default=("ID,Tail,Head,NextProgenitor,NextSubhalo,"
-                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail"))
+                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail,hostHaloID"))
     parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
                         help="Conversion factor to go from a unique, "
                         "per-snapshot halo index to a temporally unique haloID. "
@@ -191,11 +191,13 @@ def sort_and_write_file(args):
             snapshot_indices[snap_key] = indices
             ID_maps[Snap_Nums[snap_key]] = oldIDs_to_newIDs
 
-        # For some ID fields (e.g., NextProgenitor), the value is -1.  When we
-        # convert the temporalID to a Snapshot number, the operation we do is
-        # +1 * mult_factor.
-        # If the ID is -1 the 'Snapshot number' will be 0.  We want to preserve
-        # these -1 so we map to itself.
+        # For some ID fields (e.g., NextProgenitor), the value is -1. 
+        # When we convert from the temporalID to a snapshot number, we subtract
+        # 1 and divide by the multiplication factor (default 1e12), then cast
+        # to an integer. Hence -2 divided by a huge number will be less than 1
+        # and when it's cast to an integer will result in 0.
+        # So the 'Snapshot Number' for values of -1 will be 0.  We want to
+        # preserve these -1 flags so we map -1 to -1.
         ID_maps[0] = {-1:-1}
 
         end_time = time.time()
