@@ -316,69 +316,91 @@ def convert_treefrog(args):
         print("Now converting the old, global indices to ones that are "
               "forest-local.")
 
-        for count, forest in enumerate(tqdm(NHalos_Forest.keys())):
-            NHalos_processed = 0  # Number of halos in this forest that have
-                                  # been processed.
-            ID_maps = {}
+        NHalos_processed = np.zeros(len(NHalos_Forest.keys()))
+        ID_maps = {}
+        for snap_key in tqdm(Snap_Keys):
+            try:
+                NHalos = len(f_in[snap_key][args["halo_id"]])
+                if (NHalos == 0):
+                    continue
+            except KeyError:
+                continue
 
-            for snap_key in sorted(NHalos_Forest[forest].keys()):
+            oldIDs_global = []
+            newIDs_global = []
+
+            forests_thissnap = \
+            np.unique(f_in[snap_key][args["forest_id"]][:])
+
+            oldIDs = f_in[snap_key][args["halo_id"]][:]
+
+            for forest in forests_thissnap:
+
                 NHalos_snapshot = NHalos_Forest[forest][snap_key]
                 offset = NHalos_Forest_Offset[forest][snap_key]
 
                 idx_lower = offset
                 idx_upper = NHalos_snapshot + offset
 
-                oldIDs = f_in[snap_key][args["halo_id"]][idx_lower:idx_upper]
-                newIDs = np.arange(NHalos_processed,
-                                   NHalos_processed + NHalos_snapshot)
+                oldIDs_thisforest = oldIDs[idx_lower:idx_upper] 
+                newIDs_thisforest = np.arange(NHalos_processed[forest-1],
+                                            NHalos_processed[forest-1] + NHalos_snapshot)
 
-                #print("For forest {0} at snapshot {1} there are {2} oldIDs"
-                #      .format(forest, snap_key, len(oldIDs)))
+                for val1, val2 in zip(oldIDs_thisforest, newIDs_thisforest):
+                    oldIDs_global.append(int(val1))
+                    newIDs_global.append(int(val2))
 
-                oldIDs_to_newIDs = dict(zip(oldIDs, newIDs))
-                ID_maps[Snap_Nums[snap_key]] = oldIDs_to_newIDs
+                NHalos_processed[forest-1] += NHalos_snapshot
 
-                NHalos_processed += NHalos_snapshot
+            oldIDs_to_newIDs = dict(zip(list(oldIDs_global),
+                                        list(newIDs_global)))
+            ID_maps[Snap_Nums[snap_key]] = oldIDs_to_newIDs
 
-            # For some ID fields (e.g., NextProgenitor), the value is -1.
-            # When we convert from the temporalID to a snapshot number, we
-            # subtract 1 and divide by the multiplication factor (default 1e12)
-            # then cast to an integer.  Hence -2 divided by a huge number will
-            # be less than 1 and when it's cast to an integer will result in 0.
-            # So the 'Snapshot Number' for values of -1 will be 0.  We want to
-            # preserve these -1 flags so we map -1 to -1.
-            ID_maps[0] = {-1:-1}
+        # For some ID fields (e.g., NextProgenitor), the value is -1.
+        # When we convert from the temporalID to a snapshot number, we
+        # subtract 1 and divide by the multiplication factor (default 1e12)
+        # then cast to an integer.  Hence -2 divided by a huge number will
+        # be less than 1 and when it's cast to an integer will result in 0.
+        # So the 'Snapshot Number' for values of -1 will be 0.  We want to
+        # preserve these -1 flags so we map -1 to -1.
+        ID_maps[0] = {-1:-1}
                     
-            # We now have the ID mapping for this forest.  Let's loop back
-            # through all the snapshots and update the ID to be forest-local.
-            for snap_key in sorted(NHalos_Forest[forest].keys()):
-                for field in args["ID_fields"]:  # If this field has an ID...
-                    NHalos_snapshot = NHalos_Forest[forest][snap_key]
-                    offset = NHalos_Forest_Offset[forest][snap_key]
+        # We now have the ID mapping for this forest.  Let's loop back
+        # through all the snapshots and update the ID to be forest-local.
 
-                    idx_lower = offset
-                    idx_upper = NHalos_snapshot + offset
+        for snap_key in tqdm(Snap_Keys):
+            try:
+                NHalos = len(f_in[snap_key][args["halo_id"]])
+                if (NHalos == 0):
+                    continue
+            except KeyError:
+                continue
 
-                    oldID = f_in[snap_key][field][idx_lower:idx_upper]
-                    snapnum = cmn.temporalID_to_snapnum(oldID,
-                                                        args["index_mult_factor"])
+            forests_thissnap = \
+            np.unique(f_in[snap_key][args["forest_id"]][:])
 
-                    # We now want to map the oldIDs to the new, forest-local
-                    # IDs.  However because you can't hash a dictionary with a
-                    # numpy array, this needs to be done manually in a `for`
-                    # loop.
 
-                    newID = [ID_maps[snap][ID] for snap, ID in zip(snapnum,  
-                                                                   oldID)]
-                    f_out[snap_key][field][idx_lower:idx_upper] = newID
+            for field in args["ID_fields"]:  # If this field has an ID...
 
-                    if field == args["fofID"] and \
-                       Snap_Nums[snap_key] == max(Snap_Nums.values()): 
-                        fix_flybys(f_in, f_out, snap_key, Snap_Nums[snap_key],
-                                   ID_maps, args, idx_lower, idx_upper)
-            if count > 20:
-                exit()
+                oldID = f_in[snap_key][field][:]
+                snapnum = cmn.temporalID_to_snapnum(oldID,
+                                                    args["index_mult_factor"])
 
+                # We now want to map the oldIDs to the new, forest-local
+                # IDs.  However because you can't hash a dictionary with a
+                # numpy array, this needs to be done manually in a `for`
+                # loop.
+
+                newID = [ID_maps[snap][ID] for snap, ID in zip(snapnum,  
+                                                               oldID)]
+                f_out[snap_key][field][:] = newID
+
+                '''
+                if field == args["fofID"] and \
+                   Snap_Nums[snap_key] == max(Snap_Nums.values()): 
+                    fix_flybys(f_in, f_out, snap_key, Snap_Nums[snap_key],
+                               ID_maps, args, idx_lower, idx_upper)
+                '''
 
 if __name__ == '__main__':
 
