@@ -216,7 +216,7 @@ def plot_forests(NHalos_Forest):
 
 
 def fix_flybys(f_in, f_out, snap_key, snap_num, IDmap, args, 
-               idx_lower, idx_upper):
+               NHalos_Forest, NHalos_Forest_Offset):
     """
     Fixes flybys for a single forest. 
 
@@ -259,19 +259,31 @@ def fix_flybys(f_in, f_out, snap_key, snap_num, IDmap, args,
     written to disk on-the-fly (pun intended). 
     """
 
-    # We mark the most massive FoF halo as the 'True' FoF halo.
-    mass = f_in[snap_key]["Mass_200mean"][idx_lower:idx_upper]
-    true_fof_idx = np.argmax(mass) + idx_lower
+    for forest in tqdm(NHalos_Forest.keys()):
+    
+        try:    
+            NHalos_snapshot = NHalos_Forest[forest][snap_key]
+            offset = NHalos_Forest_Offset[forest][snap_key]
+        except KeyError:
+            continue
 
-    # Find the forest-local index that corresponds to the True FoF halo.
-    fofids = f_in[snap_key][args["fofID"]][idx_lower:idx_upper]
-    true_fofid = IDmap[snap_num][f_in[snap_key][args["halo_id"]][true_fof_idx]]
+        idx_lower = offset
+        idx_upper = NHalos_snapshot + offset
 
-    # Then for each FoF Halo that does not point to the True FoF halo, 
-    for count, fofid in enumerate(fofids):
-        if fofid == -1:
-            # Update the FoF pointer.
-            f_out[snap_key][args["fofID"]][idx_lower+count] = true_fofid 
+
+        # We mark the most massive FoF halo as the 'True' FoF halo.
+        mass = f_in[snap_key]["Mass_200mean"][idx_lower:idx_upper]
+        true_fof_idx = np.argmax(mass) + idx_lower
+
+        # Find the forest-local index that corresponds to the True FoF halo.
+        fofids = f_in[snap_key][args["fofID"]][idx_lower:idx_upper]
+        true_fofid = IDmap[snap_num][f_in[snap_key][args["halo_id"]][true_fof_idx]]
+
+        # Then for each FoF Halo that does not point to the True FoF halo, 
+        for count, fofid in enumerate(fofids):
+            if fofid == -1:
+                # Update the FoF pointer.
+                f_out[snap_key][args["fofID"]][idx_lower+count] = true_fofid 
 
 
 def convert_treefrog(args):
@@ -395,12 +407,13 @@ def convert_treefrog(args):
                                                                oldID)]
                 f_out[snap_key][field][:] = newID
 
-                '''
+    
                 if field == args["fofID"] and \
                    Snap_Nums[snap_key] == max(Snap_Nums.values()): 
                     fix_flybys(f_in, f_out, snap_key, Snap_Nums[snap_key],
-                               ID_maps, args, idx_lower, idx_upper)
-                '''
+                               ID_maps, args, NHalos_Forest,
+                               NHalos_Forest_Offset)
+   
 
 if __name__ == '__main__':
 
