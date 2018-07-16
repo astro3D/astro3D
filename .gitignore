@@ -1,0 +1,6 @@
+*.npz
+*.png
+*.hdf5
+*.txt
+*.lprof
+data/
