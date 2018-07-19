@@ -39,18 +39,16 @@ def parse_inputs():
                         help="Field names we will be sorted on. ORDER IS "
                         "IMPORTANT.  Order using the outer-most sort to the "
                         "inner-most.  Separate each field name with a comma. "
-                        "Default: ForestID,Mass_200mean.",
-                        default="ForestID,Mass_200mean")
+                        "Default: ForestID,hostHaloID,Mass_200mean.",
+                        default="ForestID,hostHaloID,Mass_200mean")
     parser.add_argument("-i", "--HaloID", dest="halo_id",
                         help="Field name for halo ID. Default: ID.",
                         default="ID")
     parser.add_argument("-p", "--ID_fields", dest="ID_fields",
                         help="Field names for those that contain IDs.  "
                         "Separate field names with a comma. "
-                        "Default: ID,Tail,Head,NextProgenitor,NextSubhalo,"
-                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail,hostHaloID",
-                        default=("ID,Tail,Head,NextProgenitor,NextSubhalo,"
-                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail,hostHaloID"))
+                        "Default: Head,Tail,RootHead,RootTail,ID,hostHaloID", 
+                        default=("Head,Tail,RootHead,RootTail,ID,hostHaloID"))
     parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
                         help="Conversion factor to go from a unique, "
                         "per-snapshot halo index to a temporally unique haloID. "

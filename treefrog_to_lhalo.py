@@ -100,11 +100,8 @@ def parse_inputs():
     parser.add_argument("-d", "--ID_fields", dest="ID_fields",
                         help="Field names for those that contain IDs.  "
                         "Separate field names with a comma. "
-                        "Default: ID,Tail,Head,NextProgenitor,NextSubhalo,"
-                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail,hostHaloID",
-                        default=("ID,Tail,Head,NextProgenitor,NextSubhalo,"
-                                 "PreviousProgenitor,PreviousSubhalo,RootHead,"
-                                 "RootTail,hostHaloID"))
+                        "Default: Head,Tail,RootHead,RootTail,ID,hostHaloID", 
+                        default=("Head,Tail,RootHead,RootTail,ID,hostHaloID"))
     parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
                         help="Conversion factor to go from a unique, "
                         "per-snapshot halo index to a temporally unique haloID."
@@ -219,7 +216,7 @@ def fix_flybys(tree):
     return tree
 
 
-def convert_treefrog(args):
+def convert_treefrog(args, halo_id_name, forest_id_name):
     """
     Converts Treefrog trees into LHalo trees.
 
@@ -246,11 +243,12 @@ def convert_treefrog(args):
 
         NHalos_Forest, NHalos_Forest_Offset = cmn.get_halos_per_forest(f_in,
                                                                        Snap_Keys,
-                                                                       args)
+                                                                       halo_id_name,
+                                                                       forest_id_name)
 
         print("Copying the old file to a new one.")            
         for key in tqdm(f_in.keys()):
-            cmn.copy_group(f_in, f_out, key, args)
+            cmn.copy_group(f_in, f_out, key)
 
         print("Now creating a dictionary that maps the old, global indices to " 
               "ones that are forest-local.")
@@ -341,7 +339,10 @@ def convert_treefrog(args):
 
 
 def write_out_lhalo_binary(fname_in, fname_out, halo_id_name, forest_id_name):
-    
+  
+    print("Writing out the trees that are already sorted and have tree-local "
+          "indices in the LHalo binary format.")
+  
     # Find the max value of the object where the compared
     # values are returned via the "key". In this case, 
     # compares the integer Snapshot number values, and then 
@@ -369,18 +370,22 @@ def write_out_lhalo_binary(fname_in, fname_out, halo_id_name, forest_id_name):
             tree = np.zeros(NHalos, dtype=LHalo_Desc)
             offset = 0
 
-            for snap_key in Snap_Keys[::-1]: 
-                halos_forest_snap = list(np.where(f_in[snap_key][forest_id_name][:] == ForestID)[0])
+            for snap_key in Snap_Keys[::-1]:
+                halos_forest_offset = NHalos_Forest_Offset[ForestID][snap_key]
+                NHalos_forest_snap = NHalos_Forest[ForestID][snap_key]
+                halos_forest_snap = list(np.arange(halos_forest_offset,
+                                                   halos_forest_offset + NHalos_forest_snap))
                 print("Filling {1} halos for Snapshot {0}".format(snap_key, len(halos_forest_snap)))
                 if len(halos_forest_snap) > 0:
                     tree, offset = fill_LHalo_properties(tree, f_in[snap_key], 
                                                          halos_forest_snap, 
                                                          offset,
                                                          Snap_Nums[snap_key], 0)
-                    print(tree)
-                    print(tree["FirstHaloInFOFgroup"])
+                    print(tree[0:7])
+                    print(tree["FirstHaloInFOFgroup"][0:7])
                     exit()
 
+            '''
             all_descendants = tree["Descendant"][:]
             for ii, d in enumerate(all_descendants):
                 curr = tree["FirstProgenitor"][d]
@@ -390,7 +395,7 @@ def write_out_lhalo_binary(fname_in, fname_out, halo_id_name, forest_id_name):
                 tree["NextProgenitor"][curr] = ii
 
             tree = fix_flybys(tree)
-
+            '''
             exit()
 
 def fill_LHalo_properties(tree, f_in, halo_indices, current_offset, snapnum,
@@ -405,6 +410,7 @@ def fill_LHalo_properties(tree, f_in, halo_indices, current_offset, snapnum,
     tree["FirstHaloInFOFgroup"][current_offset:current_offset+NHalos_thissnap] = f_in["hostHaloID"][halo_indices]
     tree["NextHaloInFOFgroup"][current_offset:current_offset+NHalos_thissnap] = -1
 
+    '''
     all_hosthalo_inds = f_in["hostHaloID"][halo_indices]
     _, sub_and_host_inds = np.unique(all_hosthalo_inds, return_inverse=True)
     for ii in sub_and_host_inds:
@@ -417,7 +423,7 @@ def fill_LHalo_properties(tree, f_in, halo_indices, current_offset, snapnum,
             curr = tree["NextHaloInFOFgroup"][current_offset + curr]
 
         tree["NextHaloInFOFgroup"][current_offset + curr] = current_offset + ii
-            
+    '''            
 
     tree["Len"][current_offset:current_offset+NHalos_thissnap] = f_in["npart"][halo_indices]
     tree["M_Mean200"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200mean"][halo_indices]
@@ -457,7 +463,7 @@ if __name__ == '__main__':
     args = parse_inputs()
 
     if args["convert_indices"]:
-        convert_treefrog(args)
+        convert_treefrog(args, args["halo_id"], args["forest_id"])
     else:
         write_out_lhalo_binary(args["fname_out"], args["fname_out_binary"], 
                                args["halo_id"], args["forest_id"]) 
