@@ -218,6 +218,14 @@ def sort_and_write_file(args):
 
         for key in tqdm(f_in.keys()):
             cmn.copy_group(f_in, f_out, key, args)
+
+            #f_out.create_dataset("oldIDs", 
+            #                     list(ID_maps[Snap_Nums[snap_key]].keys()))
+
+            #f_out.create_dataset("newIDs", 
+            #                     list(ID_maps[Snap_Nums[snap_key]].values()))
+
+
             for field in f_in[key]:
 
                 # Some keys (e.g., 'Header') don't have snapshots so need an

@@ -6,6 +6,7 @@ import sys
 import h5py
 import os
 import pytest
+from tqdm import tqdm
 
 from genesis.utils import forest_sorter as fs
 from genesis.utils import common as cmn
@@ -34,14 +35,22 @@ def parse_inputs():
     parser = argparse.ArgumentParser()
     test_dir = os.path.dirname(__file__)
 
+    # If the code is executed in the test directory, properly set the directory
+    # as ./
+    if test_dir == "":
+        test_dir = "."
+
+    default_fname_in = "{0}/test_data.hdf5".format(test_dir)
+    default_fname_out = "{0}/test_sorted.hdf5".format(test_dir)
+
     parser.add_argument("-f", "--fname_in", dest="fname_in",
                         help="Path to test HDF5 data. Default: "
-                        "{0}/test_data.hdf5".format(test_dir),
-                        default="{0}/test_data.hdf5".format(test_dir))
+                        "{0}".format(default_fname_in),
+                        default=default_fname_in)
     parser.add_argument("-o", "--fname_out", dest="fname_out",
                         help="Path to sorted output HDF5 data file. "
-                        "Default: {0}/test_sorted.hdf5".format(test_dir),
-                        default="{0}/test_sorted.hdf5".format(test_dir))
+                        "Default: {0}".format(default_fname_out), 
+                        default=default_fname_out)
     parser.add_argument("-s", "--sort_fields", dest="sort_fields",
                         help="Field names we will be sorted on. ORDER IS "
                         "IMPORTANT.  Order using the outer-most sort to the "
@@ -63,6 +72,12 @@ def parse_inputs():
     parser.add_argument("-n", "--NHalos_test", dest="NHalos_test",
                         help="Minimum number of halos to test. Default: "
                         "10,000", default=10000, type=int)
+    parser.add_argument("-g", "--gen_data", dest="gen_data",
+                        help="Flag whether we want to generate data. If this " 
+                             "is set to 0, the tests will be run on the " 
+                             "`fname_out` sorted data that was created "
+                             "running on `fname_in`. Default: 1.",
+                             default=True, type=int)
 
     args = parser.parse_args()
 
@@ -71,6 +86,15 @@ def parse_inputs():
     # commas so need to split them up into a list.
     args.ID_fields = (args.ID_fields).split(',')
     args.sort_fields = args.sort_fields.split(',')
+    
+    if args.gen_data == 0 and (args.fname_in == default_fname_in or
+                               args.fname_out == default_fname_out):
+        print("You specified that you do not want to generate data and instead "
+              "want to test an already sorted HDF5 file.")
+        print("For this setting, you must specify the ORIGINAL UNSORTED HDF5 "
+              "trees using the --fname_in option and the SORTED HDF5 trees "
+              "using the --fname_out option.")
+        raise ValueError 
 
     # Print some useful startup info. #
     print("")
@@ -117,11 +141,13 @@ def recursively_check_sort(snapshot_data, args, sort_level, halo_idx):
     if key is None or "NONE" in key.upper():
         return
 
-    this_value = snapshot_data[key][halo_idx]
-    this_id = snapshot_data[key][halo_idx]
+    values = snapshot_data[key][:]
 
-    next_value = snapshot_data[key][halo_idx + 1]
-    next_id = snapshot_data[key][halo_idx]
+    this_value = values[halo_idx]
+    this_id = values[halo_idx]
+
+    next_value = values[halo_idx + 1]
+    next_id = values[halo_idx + 1]
 
     # If the values are equal, we need to move to the next sort level.  However
     # if we're currently at the inner-most level then the sorting is still done
@@ -138,7 +164,7 @@ def recursively_check_sort(snapshot_data, args, sort_level, halo_idx):
               "via lexsort using the fields {3} (inner-most sort first), "
               "the next in the sorted list has ID {4} and a {1} value of {5}"
               .format(this_id, key, this_id, args["sort_fields"],
-                      next_id, key, next_id))
+                      next_id, next_id))
 
         cleanup(args)
         pytest.fail()
@@ -171,7 +197,8 @@ def my_test_sorted_order(args):
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
-        for snap_key in Snap_Keys:
+        print("Looping over each snapshot.")
+        for snap_key in tqdm(Snap_Keys):
             NHalos = len(f_in[snap_key][args["halo_id"]])
             if NHalos < 2:  # Skip snapshots that wouldn't be sorted.
                 continue
@@ -211,10 +238,13 @@ def my_test_check_haloIDs(args):
     files = [args["fname_in"], args["fname_out"]]
 
     for file_to_test in files:
+        print("Checking that the HaloIDs are correct for file "
+              "{0}".format(args["fname_in"]))
         with h5py.File(file_to_test, "r") as f_in:
             Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
-            for snap_key in Snap_Keys:
+            print("Looping over each Snapshot.")
+            for snap_key in tqdm(Snap_Keys):
                 if len(f_in[snap_key][args["halo_id"]]) == 0:
                     continue
 
@@ -263,7 +293,8 @@ def my_test_sorted_properties(args):
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_out.keys())
 
-        for snap_key in Snap_Keys:  # Now let's check each field.
+        print("Looping over each Snapshot")
+        for snap_key in tqdm(Snap_Keys):  # Now let's check each field.
             for field in f_out[snap_key]:
 
                 if field in args["ID_fields"]:  # Ignore ID fields.
@@ -371,10 +402,12 @@ def cleanup(args):
 
     if "-f" in sys.argv:  # Don't delete the default input data.
         os.remove(args["fname_in"])
-    os.remove(args["fname_out"])
+
+    if args["gen_data"]:  # Only delete the sorted data if it was generated.
+        os.remove(args["fname_out"])
 
 
-def test_run():
+def test_run(args=None):
     """
     Wrapper to run all the tests.
 
@@ -389,23 +422,24 @@ def test_run():
     None.
     """
 
-    args = parse_inputs()
+    if not args:
+        args = parse_inputs()
 
-    if "-f" in sys.argv:  # User specified their own input data.
-        print("You have supplied your own test input data.")
-        print("Saving a small file with the first {0} Halos."
-              .format(args["NHalos_test"]))
-        args["fname_in"] = create_test_input_data(args)
+    if args["gen_data"]: 
+        if "-f" in sys.argv:  # User specified their own input data.
+            print("You have supplied your own test input data.")
+            print("Saving a small file with the first {0} Halos."
+                  .format(args["NHalos_test"]))
+            args["fname_in"] = create_test_input_data(args)
 
-    # Since we are generating a sorted file from only a partial number of halos
-    # the merger pointers could point to a snapshot that is not included.
-    # Hence we need to skip all the merger pointer fields.
+        # Since we are generating a sorted file from only a partial number of halos
+        # the merger pointers could point to a snapshot that is not included.
+        # Hence we need to skip all the merger pointer fields.
 
-    tmp_ID_fields = args["ID_fields"]
-    args["ID_fields"] = args["halo_id"]
-    fs.sort_and_write_file(args)
-
-    args["ID_fields"] = tmp_ID_fields  # Then put back the old argsion.
+        tmp_ID_fields = args["ID_fields"]
+        args["ID_fields"] = args["halo_id"]
+        fs.sort_and_write_file(args)
+        args["ID_fields"] = tmp_ID_fields  # Then put back the old argsion.
 
     print("Checking that the produced temporal IDs are correct.")
     my_test_check_haloIDs(args)
@@ -419,9 +453,9 @@ def test_run():
     print("")
     print("All tests have passed.")
 
-    cleanup(args)
+    #cleanup(args)
 
 
 if __name__ == "__main__":
-
-    test_run()
+    args = parse_inputs()
+    test_run(args)
