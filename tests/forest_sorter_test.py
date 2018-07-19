@@ -424,6 +424,12 @@ def test_run(args=None, test_dir=None):
     if not args:
         args = parse_inputs()
 
+        test_dir = os.path.dirname(__file__)
+        # If the code is executed in the test directory, properly set the directory
+        # as ./
+        if test_dir == "":
+            test_dir = "."
+
     if args["gen_data"]: 
         if args["fname_in"]:  # User specified their own input data.
             print("You have supplied your own test input data.")
