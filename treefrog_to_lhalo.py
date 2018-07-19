@@ -11,6 +11,57 @@ import time
 from genesis.utils import common as cmn
 
 
+def get_LHalo_datastruct():
+    """
+    Generates the LHalo numpy structured array.
+
+    Parameters
+    ----------
+
+    None.
+
+    Returns
+    ----------
+
+    LHalo_Desc: numpy structured array.  Required.
+        Structured array for the LHaloTree data format.
+    """
+
+    LHalo_Desc_full = [
+        ('Descendant',          np.int32),
+        ('FirstProgenitor',     np.int32),
+        ('NextProgenitor',      np.int32),
+        ('FirstHaloInFOFgroup', np.int32),
+        ('NextHaloInFOFgroup',  np.int32),
+        ('Len',                 np.int32),
+        ('M_Mean200',           np.float32),
+        ('Mvir',                np.float32),
+        ('M_TopHat',            np.float32),
+        ('Posx',                np.float32), 
+        ('Posy',                np.float32), 
+        ('Posz',                np.float32), 
+        ('Velx',                np.float32), 
+        ('Vely',                np.float32), 
+        ('Velz',                np.float32), 
+        ('VelDisp',             np.float32),
+        ('Vmax',                np.float32),
+        ('Spinx',               np.float32),
+        ('Spiny',               np.float32),
+        ('Spinz',               np.float32),
+        ('MostBoundID',         np.int64),
+        ('SnapNum',             np.int32),
+        ('Filenr',              np.int32),
+        ('SubHaloIndex',        np.int32),
+        ('SubHalfMass',         np.float32)
+                         ]
+
+    names = [LHalo_Desc_full[i][0] for i in range(len(LHalo_Desc_full))]
+    formats = [LHalo_Desc_full[i][1] for i in range(len(LHalo_Desc_full))]
+    LHalo_Desc = np.dtype({'names': names, 'formats': formats}, align=True)
+
+    return LHalo_Desc
+
+
 def parse_inputs():
     """
     Parses the command line input arguments.
@@ -37,6 +88,9 @@ def parse_inputs():
                         help="Path to the input HDF5 data file. Required.")
     parser.add_argument("-o", "--fname_out", dest="fname_out",
                         help="Path to the output HDF5 data file. Required.")
+    parser.add_argument("-b", "--fname_out_binary", dest="fname_out_binary",
+                        help="Path to the output LHaloTree binary data file. "
+                             "Required.") 
     parser.add_argument("-t", "--forestID", dest="forest_id",
                         help="Field name for forest/tree ID. Default: ForestID.",
                         default="ForestID")
@@ -59,7 +113,11 @@ def parse_inputs():
                         help="Field name that contains the "
                         "FirstHaloInFoFgroup ID. Default: hostHaloID.",
                         default="hostHaloID")
-
+    parser.add_argument("-c", "--convert_indices", dest="convert_indices",
+                        help="Flag to control if we should convert the input "
+                             "file IDs to be snapshot local. Default: 1.",
+                        default=1, type=int)
+ 
     args = parser.parse_args()
 
     # We allow the user to enter an arbitrary number of sort fields and fields
@@ -81,142 +139,7 @@ def parse_inputs():
     return vars(args)
 
 
-def get_halos_per_forest(f_in, Snap_Keys, args):
-    """
-    Determines the number of halos in each forest.
-
-    The resulting Dictionary is nested with the outer-key given by the ForestID
-    and the inner-key given by the snapshot field name.
-
-    E.g., If Forest 5 has 10 halos at Snapshot 20 and 100 at Snapshot 21 then,
-        NHalos_Forest[5]['Snap_020'] = 10
-        NHalos_Forest[5]['Snap_021'] = 100
-
-    We also generate the offset for each Forest at each snapshot.  This is
-    necessary because whilst Forest 5 may saved first at snapshot 20, it isn't
-    necessarily saved first at snapshot 21.
-
-    Parameters
-    ----------
-
-    f_in: Open HDF5 file. Required.
-        HDF5 file that contains the sorted data.
-
-    Snap_Keys: List. Required.
-        List of keys that correspond to the fields containing the snapshot
-        data.
-
-    args: Dictionary.  Required.
-        Dictionary containing the argsion parameters specified at runtime.
-        Used to specify field name for the ForestID.
-
-    Returns
-    ----------
-
-    NHalos_Forest: Nested Dictionary. Required.
-        Nested dictionary that contains the number of halos for each Forest at
-        each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
-        key.
-
-    NHalos_Forest_Offset: Nested Dictionary. Required.
-        Nested dictionary that contains the offset for each Forest at each
-        snapshot. Outer-key is the ForestID and inner-key is the snapshot key.
-        This is required because whilst the tree is sorted by ForestID, the
-        relative position of the tree can change from snapshot to snapshot.
-    """
-
-    start_time = time.time()
-
-    print("")
-    print("Generating the dictionary for the number of halos in each forest "
-          "at each snapshot.")
-
-    NHalos_Forest = {}
-    NHalos_Forest_Offset = {}
-
-    for count, snap_key in enumerate(tqdm(Snap_Keys)):
-        if len(f_in[snap_key][args["halo_id"]]) == 0:  # Skip empty snapshots.
-            continue
-
-        halos_counted = 0
-        halo_forestids = f_in[snap_key][args["forest_id"]][:]
-
-        # First get the number of halos in each forest then grab the indices
-        # (i.e., the forestID as we start from 0) of the forests that have
-        # halos.
-        forests_binned = np.bincount(halo_forestids)
-        forestIDs = np.nonzero(forests_binned)[0]
-
-        for forest_id in forestIDs:
-            this_snap_NHalos = forests_binned[forest_id]
-
-            # The first time a forest appears it won't have a corresponding key
-            # in the nested dictionary so create it if it's the case.
-            try:
-                NHalos_Forest[forest_id][snap_key] = this_snap_NHalos
-                NHalos_Forest_Offset[forest_id][snap_key] = halos_counted
-            except KeyError:
-                NHalos_Forest[forest_id] = {snap_key: this_snap_NHalos}
-                NHalos_Forest_Offset[forest_id] = {snap_key: halos_counted}
-
-            halos_counted += this_snap_NHalos
-
-    end_time = time.time()
-    print("Creation of number of halos per forest took {0:3f} seconds."
-          .format(end_time - start_time))
-    print("")
-
-    return NHalos_Forest, NHalos_Forest_Offset
-
-
-def plot_forests(NHalos_Forest):
-    """
-    Plots the number of halos within each forest.
-
-    x-axis is the forest index (as it's saved within the NHalos_Forest
-    dictionary), y-axis is halo count.
-
-    Parameters
-    ----------
-
-    NHalos_Forest: Nested Dictionary. Required.
-        Nested dictionary that contains the number of halos for each Forest at
-        each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
-        key.
-
-    Returns
-    ----------
-
-    The plot is saved in the current directory named as "NHalos_Forest.png".
-    """
-    import pylab as plt
-
-    ax1 = plt.subplot(111)
-
-    NHalos = []
-    print("Plotting some forest statistics.")
-
-    for forest in tqdm(NHalos_Forest.keys()):
-        NHalos_this_forest = 0
-        for snap_key in NHalos_Forest[forest].keys():
-            NHalos_this_forest += NHalos_Forest[forest][snap_key]
-
-        NHalos.append(NHalos_this_forest)
-
-    ax1.scatter(np.arange(len(NHalos_Forest)), NHalos)
-
-    ax1.set_xlabel("Forest index")
-    ax1.set_ylabel("Number of Halos")
-    ax1.set_yscale("log")
-
-    output_file = "./NHalos_Forest.png"
-    plt.savefig(output_file)
-
-    plt.close()
-
-
-def fix_flybys(f_in, f_out, snap_key, snap_num, IDmap, args, 
-               NHalos_Forest, NHalos_Forest_Offset):
+def fix_flybys(tree):
     """
     Fixes flybys for a single forest. 
 
@@ -247,8 +170,16 @@ def fix_flybys(f_in, f_out, snap_key, snap_num, IDmap, args,
     args: Dictionary.  Required.
         Dictionary containing the argsion parameters specified at runtime.
 
-    idx_lower, idx_upper: Integers. Required. 
-        Index range for halos in the current forest we're fixing. 
+    NHalos_Forest: Nested Dictionary. Required.
+        Nested dictionary that contains the number of halos for each Forest at
+        each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
+        key.
+
+    NHalos_Forest_Offset: Nested Dictionary. Required.
+        Nested dictionary that contains the offset for each Forest at each
+        snapshot. Outer-key is the ForestID and inner-key is the snapshot key.
+        This is required because whilst the tree is sorted by ForestID, the
+        relative position of the tree can change from snapshot to snapshot.
 
     Returns
     ----------
@@ -259,31 +190,33 @@ def fix_flybys(f_in, f_out, snap_key, snap_num, IDmap, args,
     written to disk on-the-fly (pun intended). 
     """
 
-    for forest in tqdm(NHalos_Forest.keys()):
+    max_snapnum = max(tree["SnapNum"])
+    all_indices = np.arange(len(tree))
+    root_fof_halo_inds = (np.where((tree["SnapNum"] == max_snapnum) &
+                               (tree["FirstHaloInFOFgroup"] == all_indices)
+                              ))[0]
+    # if there is only one FOF halo, 
+    # no changes need to be made
+    if len(root_fof_halo_inds) == 1:
+        return tree
+
+    max_fof_mass_idx = np.argmax(tree[mass_field][root_fof_halo_inds])
+    if fof_idx == max_fof_mass_idx:
+        next_subhalo = tree["NextHaloInFOFgroup"][fof_idx]
+        while next_subhalo != next_subhalo:
+            next_subhalo = tree["NextHaloInFOFgroup"][next_subhalo]
+
+    #for fof_idx in root_fof_halo_inds:
     
-        try:    
-            NHalos_snapshot = NHalos_Forest[forest][snap_key]
-            offset = NHalos_Forest_Offset[forest][snap_key]
-        except KeyError:
-            continue
 
-        idx_lower = offset
-        idx_upper = NHalos_snapshot + offset
+    #tree["FirstHaloInFOFgroup"][rooot_fofs_indices
 
+    true_fof_idx = np.argmax(tree["Mvir"][root_fofs])
+    true_fof = tree["FirstHaloInFOFgroup"][true_fof_idx] 
 
-        # We mark the most massive FoF halo as the 'True' FoF halo.
-        mass = f_in[snap_key]["Mass_200mean"][idx_lower:idx_upper]
-        true_fof_idx = np.argmax(mass) + idx_lower
+    tree["FirstHaloInFOFgroup"][root_fofs] = true_fof
 
-        # Find the forest-local index that corresponds to the True FoF halo.
-        fofids = f_in[snap_key][args["fofID"]][idx_lower:idx_upper]
-        true_fofid = IDmap[snap_num][f_in[snap_key][args["halo_id"]][true_fof_idx]]
-
-        # Then for each FoF Halo that does not point to the True FoF halo, 
-        for count, fofid in enumerate(fofids):
-            if fofid == -1:
-                # Update the FoF pointer.
-                f_out[snap_key][args["fofID"]][idx_lower+count] = true_fofid 
+    return tree
 
 
 def convert_treefrog(args):
@@ -311,26 +244,21 @@ def convert_treefrog(args):
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
-        NHalos_Forest, NHalos_Forest_Offset = get_halos_per_forest(f_in,
-                                                                   Snap_Keys,
-                                                                   args)
+        NHalos_Forest, NHalos_Forest_Offset = cmn.get_halos_per_forest(f_in,
+                                                                       Snap_Keys,
+                                                                       args)
 
-        #plot_forests(NHalos_Forest)
-
-        # Let's copy everything into a new file so we don't make any mistakes.
-        #if os.path.isfile(args["fname_out"]):
-        #    print("A new file containing the old data already exists.")
-        #else:
         print("Copying the old file to a new one.")            
         for key in tqdm(f_in.keys()):
             cmn.copy_group(f_in, f_out, key, args)
 
-        print("Now converting the old, global indices to ones that are "
-              "forest-local.")
+        print("Now creating a dictionary that maps the old, global indices to " 
+              "ones that are forest-local.")
 
         NHalos_processed = np.zeros(len(NHalos_Forest.keys()))
+        Forests_InSnap = {}
         ID_maps = {}
-        for snap_key in tqdm(Snap_Keys):
+        for snap_key in tqdm(Snap_Keys[::-1]):
             try:
                 NHalos = len(f_in[snap_key][args["halo_id"]])
                 if (NHalos == 0):
@@ -343,6 +271,8 @@ def convert_treefrog(args):
 
             forests_thissnap = \
             np.unique(f_in[snap_key][args["forest_id"]][:])
+
+            Forests_InSnap[snap_key] = forests_thissnap
 
             oldIDs = f_in[snap_key][args["halo_id"]][:]
 
@@ -377,8 +307,7 @@ def convert_treefrog(args):
         # preserve these -1 flags so we map -1 to -1.
         ID_maps[0] = {-1:-1}
                     
-        # We now have the ID mapping for this forest.  Let's loop back
-        # through all the snapshots and update the ID to be forest-local.
+        print("Now going through all the snapshots and updating the IDs.")
 
         for snap_key in tqdm(Snap_Keys):
             try:
@@ -407,15 +336,129 @@ def convert_treefrog(args):
                                                                oldID)]
                 f_out[snap_key][field][:] = newID
 
-    
-                if field == args["fofID"] and \
-                   Snap_Nums[snap_key] == max(Snap_Nums.values()): 
-                    fix_flybys(f_in, f_out, snap_key, Snap_Nums[snap_key],
-                               ID_maps, args, NHalos_Forest,
-                               NHalos_Forest_Offset)
-   
+            # Field Loop.
+        # Snapshot Loop.
 
+
+def write_out_lhalo_binary(fname_in, fname_out, halo_id_name, forest_id_name):
+    
+    # Find the max value of the object where the compared
+    # values are returned via the "key". In this case, 
+    # compares the integer Snapshot number values, and then 
+    # returns the "Snapshot_group" key in the Snap_Keys dictionary.
+    # Taken from
+    # https://stackoverflow.com/questions/268272/getting-key-with-maximum-value-in-dictionary
+
+    LHalo_Desc = get_LHalo_datastruct()
+   
+    with h5py.File(fname_in, "r") as f_in:
+        Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
+
+        NHalos_Forest, NHalos_Forest_Offset = cmn.get_halos_per_forest(f_in,
+                                                                       Snap_Keys,
+                                                                       halo_id_name,
+                                                                       forest_id_name)
+        last_snap_key = max(Snap_Nums, key=Snap_Nums.get)
+
+        forest_to_process = np.unique(f_in[last_snap_key][forest_id_name][:])
+        for ForestID in forest_to_process:
+            NHalos = sum(NHalos_Forest[ForestID].values())
+            print("For Forest {0} there are {1} halos.".format(ForestID,
+                  NHalos))
+
+            tree = np.zeros(NHalos, dtype=LHalo_Desc)
+            offset = 0
+
+            for snap_key in Snap_Keys[::-1]: 
+                halos_forest_snap = list(np.where(f_in[snap_key][forest_id_name][:] == ForestID)[0])
+                print("Filling {1} halos for Snapshot {0}".format(snap_key, len(halos_forest_snap)))
+                if len(halos_forest_snap) > 0:
+                    tree, offset = fill_LHalo_properties(tree, f_in[snap_key], 
+                                                         halos_forest_snap, 
+                                                         offset,
+                                                         Snap_Nums[snap_key], 0)
+                    print(tree)
+                    print(tree["FirstHaloInFOFgroup"])
+                    exit()
+
+            all_descendants = tree["Descendant"][:]
+            for ii, d in enumerate(all_descendants):
+                curr = tree["FirstProgenitor"][d]
+                while tree["NextProgenitor"][curr] != -1:
+                    curr = tree["NextProgenitor"][curr]
+
+                tree["NextProgenitor"][curr] = ii
+
+            tree = fix_flybys(tree)
+
+            exit()
+
+def fill_LHalo_properties(tree, f_in, halo_indices, current_offset, snapnum,
+                          filenr):
+
+    NHalos_thissnap = len(halo_indices)
+
+    tree["Descendant"][current_offset:current_offset+NHalos_thissnap] = f_in["Head"][halo_indices]
+    tree["FirstProgenitor"][current_offset:current_offset+NHalos_thissnap]  = f_in["Tail"][halo_indices]
+    tree["NextProgenitor"][current_offset:current_offset+NHalos_thissnap]  = -1
+
+    tree["FirstHaloInFOFgroup"][current_offset:current_offset+NHalos_thissnap] = f_in["hostHaloID"][halo_indices]
+    tree["NextHaloInFOFgroup"][current_offset:current_offset+NHalos_thissnap] = -1
+
+    all_hosthalo_inds = f_in["hostHaloID"][halo_indices]
+    _, sub_and_host_inds = np.unique(all_hosthalo_inds, return_inverse=True)
+    for ii in sub_and_host_inds:
+        fof_ind = tree["FirstHaloInFOFgroup"][current_offset + ii]
+        if fof_ind == current_offset + ii:
+            continue
+
+        curr = fof_ind
+        while tree["NextHaloInFOFgroup"][current_offset + curr] != -1:
+            curr = tree["NextHaloInFOFgroup"][current_offset + curr]
+
+        tree["NextHaloInFOFgroup"][current_offset + curr] = current_offset + ii
+            
+
+    tree["Len"][current_offset:current_offset+NHalos_thissnap] = f_in["npart"][halo_indices]
+    tree["M_Mean200"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200mean"][halo_indices]
+    tree["Mvir"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200crit"][halo_indices] 
+    tree["M_TopHat"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200crit"][halo_indices] 
+
+    tree["Posx"][current_offset:current_offset+NHalos_thissnap] = f_in["Xc"][halo_indices]
+    tree["Posy"][current_offset:current_offset+NHalos_thissnap] = f_in["Yc"][halo_indices]
+    tree["Posz"][current_offset:current_offset+NHalos_thissnap] = f_in["Zc"][halo_indices]
+
+    tree["Velx"][current_offset:current_offset+NHalos_thissnap] = f_in["VXc"][halo_indices]
+    tree["Vely"][current_offset:current_offset+NHalos_thissnap] = f_in["VYc"][halo_indices]
+    tree["Velz"][current_offset:current_offset+NHalos_thissnap] = f_in["VZc"][halo_indices]
+
+    tree["VelDisp"][current_offset:current_offset+NHalos_thissnap] = f_in["sigV"][halo_indices]
+    tree["Vmax"][current_offset:current_offset+NHalos_thissnap]  = f_in["Vmax"][halo_indices]
+
+    tree["Spinx"][current_offset:current_offset+NHalos_thissnap] = f_in["Lx"][halo_indices]
+    tree["Spiny"][current_offset:current_offset+NHalos_thissnap] = f_in["Ly"][halo_indices]
+    tree["Spinz"][current_offset:current_offset+NHalos_thissnap] = f_in["Lz"][halo_indices]
+    
+    tree["MostBoundID"] [current_offset:current_offset+NHalos_thissnap]= f_in["ID"][halo_indices] ##
+
+    tree["SnapNum"][current_offset:current_offset+NHalos_thissnap]= snapnum 
+    tree["Filenr"][current_offset:current_offset+NHalos_thissnap] = filenr 
+       
+    tree["SubHaloIndex"][current_offset:current_offset+NHalos_thissnap] = -1 ## 
+    tree["SubHalfMass"][current_offset:current_offset+NHalos_thissnap] = -1 ## 
+
+    current_offset += NHalos_thissnap
+
+    return tree, current_offset
+
+ 
 if __name__ == '__main__':
 
     args = parse_inputs()
-    convert_treefrog(args)
+
+    if args["convert_indices"]:
+        convert_treefrog(args)
+    else:
+        write_out_lhalo_binary(args["fname_out"], args["fname_out_binary"], 
+                               args["halo_id"], args["forest_id"]) 
+
