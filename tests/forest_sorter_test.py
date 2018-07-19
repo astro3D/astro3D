@@ -34,7 +34,6 @@ def parse_inputs():
 
     parser = argparse.ArgumentParser()
     test_dir = os.path.dirname(__file__)
-
     # If the code is executed in the test directory, properly set the directory
     # as ./
     if test_dir == "":
@@ -323,7 +322,7 @@ def my_test_sorted_properties(args):
                     pytest.fail()
 
 
-def create_test_input_data(args):
+def create_test_input_data(args, test_dir):
     """
     Creates a test data set from the user supplied input data.
 
@@ -351,7 +350,7 @@ def create_test_input_data(args):
         The path to the small copied data file.
     """
 
-    fname_out = "{0}/my_test_data.hdf5"
+    fname_out = "{0}/my_test_data.hdf5".format(test_dir)
 
     with h5py.File(args["fname_in"], "r") as f_in, \
          h5py.File(fname_out, "w") as f_out:
@@ -363,7 +362,7 @@ def create_test_input_data(args):
             if len(f_in[snap_key][args["halo_id"]]) == 0:
                 continue
 
-            cmn.copy_group(f_in, f_out, snap_key, args)
+            cmn.copy_group(f_in, f_out, snap_key)
             NHalos += len(f_in[snap_key][args["halo_id"]])
 
             if NHalos >= args["NHalos_test"]:
@@ -407,7 +406,7 @@ def cleanup(args):
         os.remove(args["fname_out"])
 
 
-def test_run(args=None):
+def test_run(args=None, test_dir=None):
     """
     Wrapper to run all the tests.
 
@@ -426,11 +425,11 @@ def test_run(args=None):
         args = parse_inputs()
 
     if args["gen_data"]: 
-        if "-f" in sys.argv:  # User specified their own input data.
+        if args["fname_in"]:  # User specified their own input data.
             print("You have supplied your own test input data.")
             print("Saving a small file with the first {0} Halos."
                   .format(args["NHalos_test"]))
-            args["fname_in"] = create_test_input_data(args)
+            args["fname_in"] = create_test_input_data(args, test_dir)
 
         # Since we are generating a sorted file from only a partial number of halos
         # the merger pointers could point to a snapshot that is not included.
@@ -458,4 +457,9 @@ def test_run(args=None):
 
 if __name__ == "__main__":
     args = parse_inputs()
-    test_run(args)
+
+    test_dir = os.path.dirname(__file__)
+    if test_dir == "":
+        test_dir = "."
+
+    test_run(args, test_dir)

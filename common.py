@@ -201,7 +201,7 @@ def temporalID_to_snapnum(temporalID, index_mult_factor):
     return snapnum
 
 
-def copy_group(file_in, file_out, key, opt):
+def copy_group(file_in, file_out, key):
     """
     Copies HDF5 group into a new HDF5 file (with same data-structure).
 
@@ -214,10 +214,6 @@ def copy_group(file_in, file_out, key, opt):
 
     key: String.  Required.
         Name of the HDF5 group being copied.
-
-    opt: Dictionary.  Required.
-        Dictionary containing the option parameters specified at runtime.
-        Used to specify the field names we are sorting on.
 
     Returns
     ----------

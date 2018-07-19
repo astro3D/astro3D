@@ -217,7 +217,7 @@ def sort_and_write_file(args):
         start_time = time.time()
 
         for key in tqdm(f_in.keys()):
-            cmn.copy_group(f_in, f_out, key, args)
+            cmn.copy_group(f_in, f_out, key)
 
             #f_out.create_dataset("oldIDs", 
             #                     list(ID_maps[Snap_Nums[snap_key]].keys()))
