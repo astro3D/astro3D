@@ -379,9 +379,12 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
     ----------
 
     fname_in, fname_out: String. Default: `<test_directory>/test_data.hdf5`,
-    `<test_directory>/test_sorted.hdf5`. 
-        Path to the input HDF5 trees and path to where the sorted trees will be
-        saved.
+    `<test_directory>/test_sorted.hdf5`.
+        If `gen_data=0`, these are the paths to the original unsorted HDF5
+        trees and the sorted HDF5 data file we are testing.
+
+        If `gen_data=1`, this is the path to the original unsorted HDF5
+        trees and the path to where the test sorted data set should be saved.
 
         ..note::
             If `gen_data=1` the sorted trees will be removed upon exit. 
@@ -429,6 +432,7 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
             fname_in = create_test_input_data(fname_in, haloID_field,
                                               NHalos_test)
 
+        print("Creating the sorted trees from {0}".format(fname_in))
         # Since we are generating a sorted file from only a partial number of halos
         # the merger pointers could point to a snapshot that is not included.
         # Hence we need to skip all the merger pointer fields.
@@ -473,20 +477,24 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
     if gen_data:
         cleanup(fname_in)
 
+if __name__ == '__main__':
+    """
+    Example script for running tests on your own data. 
 
-if __name__ == "__main__":
-   
+    See `test_run()` documentation for explanation of each variable.
+    """
+
     fname_in=default_fname_in
-    fname_out=default_fname_out
+    fname_out=default_fname_out 
     haloID_field="ID"
     sort_fields=["ForestID", "hostHaloID", "Mass_200mean"]
+    sort_direction=np.array([1,1,-1])
     sort_direction=np.array([1,1,-1])
     ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID", "hostHaloID"]
     index_mult_factor=1e12
     NHalos_test=10000
     gen_data=1
 
-    sort_direction=np.array([1,1,-1])
     test_run(fname_in, fname_out, haloID_field,
              sort_fields, sort_direction, ID_fields, index_mult_factor,
              NHalos_test, gen_data)
