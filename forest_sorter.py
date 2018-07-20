@@ -41,7 +41,7 @@ def parse_inputs():
                         "inner-most.  Separate each field name with a comma. "
                         "Default: ForestID,hostHaloID,Mass_200mean.",
                         default="ForestID,hostHaloID,Mass_200mean")
-    parser.add_argument("-i", "--HaloID", dest="halo_id",
+    parser.add_argument("-i", "--HaloID", dest="haloID_field",
                         help="Field name for halo ID. Default: ID.",
                         default="ID")
     parser.add_argument("-p", "--ID_fields", dest="ID_fields",
@@ -69,7 +69,7 @@ def parse_inputs():
 
     # Print some useful startup info. #
     print("")
-    print("The HaloID field for each halo is '{0}'.".format(args.halo_id))
+    print("The HaloID field for each halo is '{0}'.".format(args.haloID_field))
     print("Sorting on the {0} fields".format(args.sort_fields))
     print("The fields that contain IDs are {0}".format(args.ID_fields))
     print("")
@@ -131,7 +131,7 @@ def get_sort_indices(file_in, snap_key, sort_fields):
     return indices
 
 
-def forest_sorter(fname_in, fname_out, halo_id_name="ID",
+def forest_sorter(fname_in, fname_out, haloID_field="ID",
                   sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
                   ID_fields=["Head", "Tail", "RootHead", "RootTail",
                              "ID", "hostHaloID"],
@@ -150,7 +150,7 @@ def forest_sorter(fname_in, fname_out, halo_id_name="ID",
         Path to the input HDF5 trees and path to where the sorted trees will be
         saved. 
 
-    halo_id_name: String. Default: 'ID'.
+    haloID_field: String. Default: 'ID'.
         Field name within the HDF5 file that corresponds to the unique halo ID.
 
     sort_fields: List of strings. Default: ['ForestID', 'hostHaloID',
@@ -189,7 +189,7 @@ def forest_sorter(fname_in, fname_out, halo_id_name="ID",
         start_time = time.time()
         for snap_key in tqdm(Snap_Keys):
             # We only want to go through snapshots that contain halos.
-            if len(f_in[snap_key][halo_id_name]) == 0:
+            if len(f_in[snap_key][haloID_field]) == 0:
                 continue
 
             # Need to get the indices that sort the data according to the
@@ -197,7 +197,7 @@ def forest_sorter(fname_in, fname_out, halo_id_name="ID",
 
             indices = get_sort_indices(f_in, snap_key, sort_fields)
 
-            old_haloIDs = f_in[snap_key][halo_id_name][:]
+            old_haloIDs = f_in[snap_key][haloID_field][:]
             old_haloIDs_sorted = old_haloIDs[indices]
 
             # The ID of a halo depends on its snapshot-local index.
@@ -257,7 +257,7 @@ def forest_sorter(fname_in, fname_out, halo_id_name="ID",
                 # Some keys (e.g., 'Header') don't have snapshots so need an
                 # except to catch this.
                 try:
-                    NHalos = len(f_in[key][halo_id_name])
+                    NHalos = len(f_in[key][haloID_field])
                     if (NHalos == 0):
                         continue
                 except KeyError:
@@ -289,6 +289,6 @@ def forest_sorter(fname_in, fname_out, halo_id_name="ID",
 if __name__ == '__main__':
 
     args = parse_inputs()
-    sort_and_write_file(args["fname_in"], args["fname_out"], args["halo_id"],
+    sort_and_write_file(args["fname_in"], args["fname_out"], args["haloID_field"],
                         args["sort_fields"], args["ID_fields"],
                         args["index_mult_factor"])
