@@ -52,16 +52,16 @@ def parse_inputs():
                         help="Field names we will be sorted on. ORDER IS "
                         "IMPORTANT.  Order using the outer-most sort to the "
                         "inner-most.  Separate each field name with a comma. "
-                        "Default: ForestID,Mass_200mean.",
-                        default="ForestID,Mass_200mean")
+                        "Default: ForestID,hostHaloID,Mass_200mean.",
+                        default="ForestID,hostHaloID,Mass_200mean")
     parser.add_argument("-i", "--HaloID", dest="haloID_field",
                         help="Field name for halo ID. Default: ID.",
                         default="ID")
     parser.add_argument("-p", "--ID_fields", dest="ID_fields",
                         help="Field names for those that contain IDs.  Separate "
                         "field names with a comma. "
-                        "Default: ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).",
-                        default=("ID,Tail,Head,NextSubHalo,Dummy,Dummy"))
+                        "Default: Head,Tail,RootHead,RootTail,ID,hostHaloID", 
+                        default=("Head,Tail,RootHead,RootTail,ID,hostHaloID"))
     parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
                         help="Conversion factor to go from a unique, "
                         "per-snapshot halo index to a temporally unique haloID. "
@@ -106,8 +106,8 @@ def parse_inputs():
 
 
 def my_test_sorted_order(fname_out=default_fname_out, haloID_field="ID", 
-                         sort_fields=["ForestID", "hostHaloID", "Mass_200mean"], 
-                         gen_data=0):
+                         sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
+                         sort_direction=np.array([1,1,-1]), gen_data=0): 
     """
     Checks the indices of the output file to ensure sorting order is correct.
 
@@ -146,8 +146,8 @@ def my_test_sorted_order(fname_out=default_fname_out, haloID_field="ID",
     `~pytest.fail()` is invoked by `recursively_check_sort()` if the test fails.
     """
 
-    def recursively_check_sort(snapshot_data, sort_fields, sort_level, 
-                               halo_idx, gen_data):
+    def recursively_check_sort(snapshot_data, sort_fields, sort_direction, 
+                               sort_level, halo_idx, gen_data):
         """
         Moves through the sort level, checking that each key was sorted.
         """
@@ -171,12 +171,13 @@ def my_test_sorted_order(fname_out=default_fname_out, haloID_field="ID",
         # correctly (equal values next to each other).
         if this_value == next_value \
            and sort_level < (len(sort_fields) - 1):
-            recursively_check_sort(snapshot_data, sort_fields,
+            recursively_check_sort(snapshot_data, sort_fields, sort_direction,
                                    sort_level + 1, halo_idx, gen_data)
 
         # Otherwise if we haven't sorted correctly in ascended order, print a
         # message and fail the test.
-        elif this_value > next_value:
+        elif (this_value > next_value and sort_direction[sort_level] == 1) or \
+             (this_value < next_value and sort_direction[sort_level] == -1):
             print("For Halo ID {0} we had a {1} value of {2}.  After sorting "
                   "via lexsort using the fields {3} (inner-most sort first), "
                   "the next in the sorted list has ID {4} and a {1} value of {5}"
@@ -208,8 +209,8 @@ def my_test_sorted_order(fname_out=default_fname_out, haloID_field="ID",
             # halo[i + 1] we need to check an inner-key to ensure it's sorted.
 
             for idx in range(NHalos - 1):
-                recursively_check_sort(f_in[snap_key], sort_fields, 0, 
-                                       idx, gen_data)
+                recursively_check_sort(f_in[snap_key], sort_fields,
+                                       sort_direction, 0, idx, gen_data)
 
 
 def my_test_check_haloIDs(fname_in=default_fname_in,
@@ -284,7 +285,9 @@ def my_test_check_haloIDs(fname_in=default_fname_in,
 def my_test_sorted_properties(fname_in=default_fname_in,
                               fname_out=default_fname_out, ID_fields="ID", 
                               sort_fields=["ForestID", "hostHaloID",
-                                           "Mass_200mean"], gen_data=0): 
+                                           "Mass_200mean"],  
+                              sort_direction=np.array([1,1,-1]), gen_data=0):
+                              
     """
     Ensures that the halo properties were sorted and saved properly.
 
@@ -334,7 +337,8 @@ def my_test_sorted_properties(fname_in=default_fname_in,
                     continue
 
                 indices = fs.get_sort_indices(f_in,
-                                              snap_key, sort_fields)
+                                              snap_key, sort_fields,
+                                              sort_direction)
 
                 input_data = f_in[snap_key][field][:]
                 input_data_sorted = input_data[indices]
@@ -449,9 +453,10 @@ def cleanup(fname_in):
 def test_run(fname_in=default_fname_in, fname_out=default_fname_out, 
              haloID_field="ID", sort_fields=["ForestID", "hostHaloID", 
                                              "Mass_200mean"],
-             ID_fields=["Head", "Tail", "RootHead", "RootTail", 
-                        "ID", "hostHaloID"], 
-             index_mult_factor=1e12, NHalos_test=10000, gen_data=1):
+             sort_direction=np.array([1,1,-1]), ID_fields=["Head", "Tail", 
+                                                           "RootHead", "RootTail", 
+                                                           "ID", "hostHaloID"],
+             index_mult_factor=1e12, NHalos_test=10000, gen_data=1):             
     """
     Wrapper to run all the tests.
 
@@ -538,11 +543,12 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
     print("Checking that the sort order is correct for the sort keys.")
 
     my_test_sorted_order(fname_out, haloID_field, 
-                         sort_fields, gen_data)
+                         sort_fields, sort_direction, gen_data)
 
     print("Checking that the sort order is correct for the halo properties.")
     my_test_sorted_properties(fname_in, fname_out,
-                              haloID_field, sort_fields)
+                              haloID_field, sort_fields, sort_direction,
+                              gen_data)
 
     print("")
     print("=================================")
@@ -556,6 +562,7 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
 if __name__ == "__main__":
     args = parse_inputs()
 
+    sort_direction=np.array([1,1,-1])
     test_run(args["fname_in"], args["fname_out"], args["haloID_field"],
-             args["sort_fields"], args["ID_fields"], args["index_mult_factor"],
+             args["sort_fields"], sort_direction, args["ID_fields"], args["index_mult_factor"],
              args["NHalos_test"], args["gen_data"])

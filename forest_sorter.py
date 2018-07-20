@@ -77,7 +77,7 @@ def parse_inputs():
     return vars(args)
 
 
-def get_sort_indices(file_in, snap_key, sort_fields):
+def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     """
     Gets the indices that will sort the HDF5 file.
 
@@ -121,10 +121,13 @@ def get_sort_indices(file_in, snap_key, sort_fields):
     sort_keys = []
 
     # We need to reverse `sort_fields` due to the behaviour of `~np.lexsort`. 
-    for key in reversed(sort_fields):
+    for key, direction in zip(reversed(sort_fields), reversed(sort_direction)):
         if key is None or "NONE" in key.upper():
             continue
-        sort_keys.append(file_in[snap_key][key])
+        if direction == -1: 
+            sort_keys.append(-np.array(file_in[snap_key][key]))
+        else:
+            sort_keys.append(np.array(file_in[snap_key][key]))
 
     indices = np.lexsort((sort_keys))
 
@@ -134,7 +137,8 @@ def get_sort_indices(file_in, snap_key, sort_fields):
 def forest_sorter(fname_in, fname_out, haloID_field="ID",
                   sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
                   ID_fields=["Head", "Tail", "RootHead", "RootTail",
-                             "ID", "hostHaloID"], index_mult_factor=1e12):
+                             "ID", "hostHaloID"], index_mult_factor=1e12,
+                  sort_direction=np.array([1,1,-1])):
     """
     Sorts and saves a HDF5 tree file on the specified sort fields.  The IDs of 
     the halos are assume to use the index within the data file and hence will 
@@ -194,7 +198,8 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
             # Need to get the indices that sort the data according to the
             # specified keys.
 
-            indices = get_sort_indices(f_in, snap_key, sort_fields)
+            indices = get_sort_indices(f_in, snap_key, sort_fields,
+                                       sort_direction)
 
             old_haloIDs = f_in[snap_key][haloID_field][:]
             old_haloIDs_sorted = old_haloIDs[indices]
@@ -288,6 +293,7 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
 if __name__ == '__main__':
 
     args = parse_inputs()
+    sort_direction = np.array([1,1,-1])
     sort_and_write_file(args["fname_in"], args["fname_out"], args["haloID_field"],
                         args["sort_fields"], args["ID_fields"],
-                        args["index_mult_factor"])
+                        args["index_mult_factor"], sort_direction) 
