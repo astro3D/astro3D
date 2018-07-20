@@ -134,8 +134,7 @@ def get_sort_indices(file_in, snap_key, sort_fields):
 def forest_sorter(fname_in, fname_out, haloID_field="ID",
                   sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
                   ID_fields=["Head", "Tail", "RootHead", "RootTail",
-                             "ID", "hostHaloID"],
-                  index_mult_factor=1e12):
+                             "ID", "hostHaloID"], index_mult_factor=1e12):
     """
     Sorts and saves a HDF5 tree file on the specified sort fields.  The IDs of 
     the halos are assume to use the index within the data file and hence will 
