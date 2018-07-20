@@ -10,6 +10,7 @@ import time
 
 from genesis.utils import common as cmn
 
+run_dir = os.path.dirname(os.path.realpath(__file__))
 
 def get_LHalo_datastruct():
     """
@@ -62,79 +63,17 @@ def get_LHalo_datastruct():
     return LHalo_Desc
 
 
-def parse_inputs():
-    """
-    Parses the command line input arguments.
+def fix_nextprog(tree):
 
-    If there has not been an input or output file specified a RuntimeError will
-    be raised.
+    all_descendants = tree["Descendant"][:]
+    for ii, d in enumerate(all_descendants):
+        curr = tree["FirstProgenitor"][d]
+        while tree["NextProgenitor"][curr] != -1:
+            curr = tree["NextProgenitor"][curr]
 
-    Parameters
-    ----------
+        tree["NextProgenitor"][curr] = ii
 
-    None.
-
-    Returns
-    ----------
-
-    args: Dictionary.  Required.
-        Dictionary of arguments from the ``argparse`` package.
-        Dictionary is keyed by the argument name (e.g., args['fname_in']).
-    """
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("-f", "--fname_in", dest="fname_in",
-                        help="Path to the input HDF5 data file. Required.")
-    parser.add_argument("-o", "--fname_out", dest="fname_out",
-                        help="Path to the output HDF5 data file. Required.")
-    parser.add_argument("-b", "--fname_out_binary", dest="fname_out_binary",
-                        help="Path to the output LHaloTree binary data file. "
-                             "Required.") 
-    parser.add_argument("-t", "--forestID", dest="forest_id",
-                        help="Field name for forest/tree ID. Default: ForestID.",
-                        default="ForestID")
-    parser.add_argument("-i", "--HaloID", dest="halo_id",
-                        help="Field name for halo ID. Default: ID.",
-                        default="ID")
-    parser.add_argument("-d", "--ID_fields", dest="ID_fields",
-                        help="Field names for those that contain IDs.  "
-                        "Separate field names with a comma. "
-                        "Default: Head,Tail,RootHead,RootTail,ID,hostHaloID", 
-                        default=("Head,Tail,RootHead,RootTail,ID,hostHaloID"))
-    parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
-                        help="Conversion factor to go from a unique, "
-                        "per-snapshot halo index to a temporally unique haloID."
-                        " Default: 1e12.", default=1e12)
-    parser.add_argument("-p", "--fofID", dest="fofID",
-                        help="Field name that contains the "
-                        "FirstHaloInFoFgroup ID. Default: hostHaloID.",
-                        default="hostHaloID")
-    parser.add_argument("-c", "--convert_indices", dest="convert_indices",
-                        help="Flag to control if we should convert the input "
-                             "file IDs to be snapshot local. Default: 1.",
-                        default=1, type=int)
- 
-    args = parser.parse_args()
-
-    # We allow the user to enter an arbitrary number of sort fields and fields
-    # that contain IDs.  They are etnered as a single string separated by
-    # commas so need to split them up into a list.
-    args.ID_fields = (args.ID_fields).split(',')
-
-    # We require an input file and an output one.
-    if (args.fname_in is None or args.fname_out is None):
-        parser.print_help()
-        raise RuntimeError
-
-    # Print some useful startup info. #
-    print("")
-    print("The HaloID field for each halo is {0}.".format(args.halo_id))
-    print("The fields that contain IDs are {0}".format(args.ID_fields))
-    print("")
-
-    return vars(args)
-
+    return tree
 
 def fix_flybys(tree):
     """
@@ -167,12 +106,12 @@ def fix_flybys(tree):
     args: Dictionary.  Required.
         Dictionary containing the argsion parameters specified at runtime.
 
-    NHalos_Forest: Nested Dictionary. Required.
+    NHalos_forest: Nested Dictionary. Required.
         Nested dictionary that contains the number of halos for each Forest at
         each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
         key.
 
-    NHalos_Forest_Offset: Nested Dictionary. Required.
+    NHalos_forest_offset: Nested Dictionary. Required.
         Nested dictionary that contains the offset for each Forest at each
         snapshot. Outer-key is the ForestID and inner-key is the snapshot key.
         This is required because whilst the tree is sorted by ForestID, the
@@ -216,19 +155,50 @@ def fix_flybys(tree):
     return tree
 
 
-def convert_treefrog(args, halo_id_name, forest_id_name):
+def convert_indices(fname_in, fname_out, 
+                    haloID_field="ID", forestID_field="ForestID", 
+                    ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID", 
+                               "hostHaloID"], index_mult_factor=1e12):
     """
-    Converts Treefrog trees into LHalo trees.
+    Converts temporally unique tree IDs to ones that are forest-local as 
+    required by the LHalo Trees format. 
 
     The data-structure of the Treefrog trees is assumed to be HDF5 File ->
-    Snapshots -> Halo Properties at each snapshot. The LHalo tree is saved as a
-    separate HDF5 file.
+    Snapshots -> Halo Properties at each snapshot.
 
+    A new HDF5 file is saved out with the updated IDs.
+
+    ..note::
+        We require the input trees to be sorted via the forest ID 
+        (`forestID_field`) and suggest to also sub-sort on hostHaloID and mass.
+        Sorting can be done using the `forest_sorter()` function.
+
+    ..note::
+        The default parameters are chosen to match the ASTRO3D Genesis trees as
+        produced by VELOCIraptor + Treefrog.
+ 
     Parameters
     ----------
 
-    args: Dictionary.  Required.
-        Dictionary containing the argsion parameters specified at runtime.
+    fname_in, fname_out: String.
+        Path to the input HDF5 VELOCIraptor + treefrog trees and the path 
+        where the LHalo correct trees will be saved.
+
+    haloID_field: String. Default: 'ID'.
+        Field name within the HDF5 file that corresponds to the unique halo ID.
+
+    forestID_field: String. Default: 'ForestID'.
+        Field name within the HDF5 file that corresponds to forest ID. 
+
+    ID_fields: List of string. Default: ['Head', 'Tail', 'RootHead', 'RootTail',
+                                        'ID', 'hostHaloID'].
+        The HDF5 field names that correspond to properties that use halo IDs.
+        As the halo IDs are updated to match the required LHalo Tree format,
+        these must also be updated. 
+
+    index_mult_factor: Integer. Default: 1e12.
+        Multiplication factor to generate a temporally unique halo ID. See
+        `common.index_to_temporalID()`.
 
     Returns
     ----------
@@ -236,15 +206,15 @@ def convert_treefrog(args, halo_id_name, forest_id_name):
     None.
     """
 
-    with h5py.File(args["fname_in"], "r") as f_in, \
-         h5py.File(args["fname_out"], "w") as f_out:
+    with h5py.File(fname_in, "r") as f_in, \
+         h5py.File(fname_out, "w") as f_out:
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
-        NHalos_Forest, NHalos_Forest_Offset = cmn.get_halos_per_forest(f_in,
+        NHalos_forest, NHalos_forest_offset = cmn.get_halos_per_forest(f_in,
                                                                        Snap_Keys,
-                                                                       halo_id_name,
-                                                                       forest_id_name)
+                                                                       haloID_field,
+                                                                       forestID_field)
 
         print("Copying the old file to a new one.")            
         for key in tqdm(f_in.keys()):
@@ -253,12 +223,12 @@ def convert_treefrog(args, halo_id_name, forest_id_name):
         print("Now creating a dictionary that maps the old, global indices to " 
               "ones that are forest-local.")
 
-        NHalos_processed = np.zeros(len(NHalos_Forest.keys()))
+        NHalos_processed = np.zeros(len(NHalos_forest.keys()))
         Forests_InSnap = {}
         ID_maps = {}
         for snap_key in tqdm(Snap_Keys[::-1]):
             try:
-                NHalos = len(f_in[snap_key][args["halo_id"]])
+                NHalos = len(f_in[snap_key][haloID_field])
                 if (NHalos == 0):
                     continue
             except KeyError:
@@ -268,16 +238,16 @@ def convert_treefrog(args, halo_id_name, forest_id_name):
             newIDs_global = []
 
             forests_thissnap = \
-            np.unique(f_in[snap_key][args["forest_id"]][:])
+            np.unique(f_in[snap_key][forestID_field][:])
 
             Forests_InSnap[snap_key] = forests_thissnap
 
-            oldIDs = f_in[snap_key][args["halo_id"]][:]
+            oldIDs = f_in[snap_key][haloID_field][:]
 
             for forest in forests_thissnap:
 
-                NHalos_snapshot = NHalos_Forest[forest][snap_key]
-                offset = NHalos_Forest_Offset[forest][snap_key]
+                NHalos_snapshot = NHalos_forest[forest][snap_key]
+                offset = NHalos_forest_offset[forest][snap_key]
 
                 idx_lower = offset
                 idx_upper = NHalos_snapshot + offset
@@ -309,21 +279,21 @@ def convert_treefrog(args, halo_id_name, forest_id_name):
 
         for snap_key in tqdm(Snap_Keys):
             try:
-                NHalos = len(f_in[snap_key][args["halo_id"]])
+                NHalos = len(f_in[snap_key][haloID_field])
                 if (NHalos == 0):
                     continue
             except KeyError:
                 continue
 
             forests_thissnap = \
-            np.unique(f_in[snap_key][args["forest_id"]][:])
+            np.unique(f_in[snap_key][forestID_field][:])
 
 
-            for field in args["ID_fields"]:  # If this field has an ID...
+            for field in ID_fields:  # If this field has an ID...
 
                 oldID = f_in[snap_key][field][:]
                 snapnum = cmn.temporalID_to_snapnum(oldID,
-                                                    args["index_mult_factor"])
+                                                    index_mult_factor)
 
                 # We now want to map the oldIDs to the new, forest-local
                 # IDs.  However because you can't hash a dictionary with a
@@ -338,7 +308,8 @@ def convert_treefrog(args, halo_id_name, forest_id_name):
         # Snapshot Loop.
 
 
-def write_out_lhalo_binary(fname_in, fname_out, halo_id_name, forest_id_name):
+def write_lhalo_binary(fname_in, fname_out, haloID_field="ID", 
+                       forestID_field="ForestID"):
   
     print("Writing out the trees that are already sorted and have tree-local "
           "indices in the LHalo binary format.")
@@ -355,15 +326,15 @@ def write_out_lhalo_binary(fname_in, fname_out, halo_id_name, forest_id_name):
     with h5py.File(fname_in, "r") as f_in:
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
-        NHalos_Forest, NHalos_Forest_Offset = cmn.get_halos_per_forest(f_in,
+        NHalos_forest, NHalos_forest_offset = cmn.get_halos_per_forest(f_in,
                                                                        Snap_Keys,
-                                                                       halo_id_name,
-                                                                       forest_id_name)
+                                                                       haloID_field, 
+                                                                       forestID_field)                                                                       
         last_snap_key = max(Snap_Nums, key=Snap_Nums.get)
 
-        forest_to_process = np.unique(f_in[last_snap_key][forest_id_name][:])
+        forest_to_process = np.unique(f_in[last_snap_key][forestID_field][:])
         for ForestID in forest_to_process:
-            NHalos = sum(NHalos_Forest[ForestID].values())
+            NHalos = sum(NHalos_forest[ForestID].values())
             print("For Forest {0} there are {1} halos.".format(ForestID,
                   NHalos))
 
@@ -371,8 +342,8 @@ def write_out_lhalo_binary(fname_in, fname_out, halo_id_name, forest_id_name):
             offset = 0
 
             for snap_key in Snap_Keys[::-1]:
-                halos_forest_offset = NHalos_Forest_Offset[ForestID][snap_key]
-                NHalos_forest_snap = NHalos_Forest[ForestID][snap_key]
+                halos_forest_offset = NHalos_forest_offset[ForestID][snap_key]
+                NHalos_forest_snap = NHalos_forest[ForestID][snap_key]
                 halos_forest_snap = list(np.arange(halos_forest_offset,
                                                    halos_forest_offset + NHalos_forest_snap))
                 print("Filling {1} halos for Snapshot {0}".format(snap_key, len(halos_forest_snap)))
@@ -381,21 +352,14 @@ def write_out_lhalo_binary(fname_in, fname_out, halo_id_name, forest_id_name):
                                                          halos_forest_snap, 
                                                          offset,
                                                          Snap_Nums[snap_key], 0)
-                    print(tree[0:7])
-                    print(tree["FirstHaloInFOFgroup"][0:7])
-                    exit()
 
-            '''
-            all_descendants = tree["Descendant"][:]
-            for ii, d in enumerate(all_descendants):
-                curr = tree["FirstProgenitor"][d]
-                while tree["NextProgenitor"][curr] != -1:
-                    curr = tree["NextProgenitor"][curr]
-
-                tree["NextProgenitor"][curr] = ii
-
+            tree = fix_nextprog(tree)
+            print(tree[0:7])
+            print(tree["NextProg"][0:7])
+            exit()
             tree = fix_flybys(tree)
-            '''
+
+        
             exit()
 
 def fill_LHalo_properties(tree, f_in, halo_indices, current_offset, snapnum,
@@ -418,9 +382,15 @@ def fill_LHalo_properties(tree, f_in, halo_indices, current_offset, snapnum,
             assert(tree["FirstHaloInFOFgroup"][fof_ind] == current_offset + ii)
             continue
 
-        curr = fof_ind
+        if tree["NextHaloInFOFgroup"][fof_ind] == -1:
+            tree["NextHaloInFOFgroup"][fof_ind] = current_offset + ii
+            continue
+        curr = fof_ind - current_offset
         while tree["NextHaloInFOFgroup"][current_offset + curr] != -1:
-            print("Curr {0}".format(curr))
+            print("Curr {0}\tii {1}\tcurrent_offset "
+                  "{2}\ttree['NextHaloInFOFgroup'][current_offset+curr] {3}"\
+                  .format(curr, ii, current_offset,
+                          tree["NextHaloInFOFgroup"][current_offset+curr]))
             curr = tree["NextHaloInFOFgroup"][current_offset + curr]
 
         tree["NextHaloInFOFgroup"][current_offset + curr] = current_offset + ii
@@ -455,16 +425,4 @@ def fill_LHalo_properties(tree, f_in, halo_indices, current_offset, snapnum,
 
     current_offset += NHalos_thissnap
 
-    return tree, current_offset
-
- 
-if __name__ == '__main__':
-
-    args = parse_inputs()
-
-    if args["convert_indices"]:
-        convert_treefrog(args, args["halo_id"], args["forest_id"])
-    else:
-        write_out_lhalo_binary(args["fname_out"], args["fname_out_binary"], 
-                               args["halo_id"], args["forest_id"]) 
-
+    return tree, current_offset 
