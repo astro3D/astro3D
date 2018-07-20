@@ -9,74 +9,6 @@ import time
 from genesis.utils import common as cmn
 
 
-def parse_inputs():
-    """
-    Parses the command line input arguments.
-
-    If there has not been an input or output file specified a RuntimeError will
-    be raised.
-
-    Parameters
-    ----------
-
-    None.
-
-    Returns
-    ----------
-
-    args: Dictionary.  Required.
-        Dictionary of arguments from the ``argparse`` package.
-        Dictionary is keyed by the argument name (e.g., args['fname_in']).
-    """
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("-f", "--fname_in", dest="fname_in",
-                        help="Path to the input HDF5 data file. Required.")
-    parser.add_argument("-o", "--fname_out", dest="fname_out",
-                        help="Path to the output HDF5 data file. Required.")
-    parser.add_argument("-s", "--sort_fields", dest="sort_fields",
-                        help="Field names we will be sorted on. ORDER IS "
-                        "IMPORTANT.  Order using the outer-most sort to the "
-                        "inner-most.  Separate each field name with a comma. "
-                        "Default: ForestID,hostHaloID,Mass_200mean.",
-                        default="ForestID,hostHaloID,Mass_200mean")
-    parser.add_argument("-i", "--HaloID", dest="haloID_field",
-                        help="Field name for halo ID. Default: ID.",
-                        default="ID")
-    parser.add_argument("-p", "--ID_fields", dest="ID_fields",
-                        help="Field names for those that contain IDs.  "
-                        "Separate field names with a comma. "
-                        "Default: Head,Tail,RootHead,RootTail,ID,hostHaloID", 
-                        default=("Head,Tail,RootHead,RootTail,ID,hostHaloID"))
-    parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
-                        help="Conversion factor to go from a unique, "
-                        "per-snapshot halo index to a temporally unique haloID. "
-                        "Default: 1e12.", default=1e12)
-
-    args = parser.parse_args()
-
-    # We require an input file and an output one.
-    if (args.fname_in is None or args.fname_out is None):
-        parser.print_help()
-        raise RuntimeError
-
-    # We allow the user to enter an arbitrary number of sort fields and fields
-    # that contain IDs.  They are etnered as a single string separated by
-    # commas so need to split them up into a list.
-    args.ID_fields = (args.ID_fields).split(',')
-    args.sort_fields = args.sort_fields.split(',')
-
-    # Print some useful startup info. #
-    print("")
-    print("The HaloID field for each halo is '{0}'.".format(args.haloID_field))
-    print("Sorting on the {0} fields".format(args.sort_fields))
-    print("The fields that contain IDs are {0}".format(args.ID_fields))
-    print("")
-
-    return vars(args)
-
-
 def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     """
     Gets the indices that will sort the HDF5 file.
@@ -136,9 +68,9 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
 
 def forest_sorter(fname_in, fname_out, haloID_field="ID",
                   sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
+                  sort_direction=np.array([1,1,-1]),
                   ID_fields=["Head", "Tail", "RootHead", "RootTail",
-                             "ID", "hostHaloID"], index_mult_factor=1e12,
-                  sort_direction=np.array([1,1,-1])):
+                             "ID", "hostHaloID"], index_mult_factor=1e12):
     """
     Sorts and saves a HDF5 tree file on the specified sort fields.  The IDs of 
     the halos are assume to use the index within the data file and hence will 
@@ -288,12 +220,3 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
               format(end_time - start_time))
         print("Done!")
         print("")
-
-
-if __name__ == '__main__':
-
-    args = parse_inputs()
-    sort_direction = np.array([1,1,-1])
-    sort_and_write_file(args["fname_in"], args["fname_out"], args["haloID_field"],
-                        args["sort_fields"], args["ID_fields"],
-                        args["index_mult_factor"], sort_direction) 

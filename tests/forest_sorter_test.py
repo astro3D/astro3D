@@ -17,93 +17,6 @@ default_fname_in = "{0}/test_data.hdf5".format(test_dir)
 default_user_fname_in = "{0}/my_test_data.hdf5".format(test_dir)
 default_fname_out = "{0}/test_sorted.hdf5".format(test_dir)
 
-def parse_inputs():
-    """
-    Parses the command line input arguments.
-
-    If there has not been an input or output file specified a RuntimeError will
-    be raised.
-
-    Parameters
-    ----------
-
-    None.
-
-    Returns
-    ----------
-
-    args: Dictionary.  Required.
-        Dictionary of arguments from the ``argparse`` package.
-        Dictionary is keyed by the argument name (e.g., args['fname_in']).
-    """
-
-    parser = argparse.ArgumentParser()
-
-
-    parser.add_argument("-f", "--fname_in", dest="fname_in",
-                        help="Path to test HDF5 data. Default: "
-                        "{0}".format(default_fname_in),
-                        default=default_fname_in)
-    parser.add_argument("-o", "--fname_out", dest="fname_out",
-                        help="Path to sorted output HDF5 data file. "
-                        "Default: {0}".format(default_fname_out), 
-                        default=default_fname_out)
-    parser.add_argument("-s", "--sort_fields", dest="sort_fields",
-                        help="Field names we will be sorted on. ORDER IS "
-                        "IMPORTANT.  Order using the outer-most sort to the "
-                        "inner-most.  Separate each field name with a comma. "
-                        "Default: ForestID,hostHaloID,Mass_200mean.",
-                        default="ForestID,hostHaloID,Mass_200mean")
-    parser.add_argument("-i", "--HaloID", dest="haloID_field",
-                        help="Field name for halo ID. Default: ID.",
-                        default="ID")
-    parser.add_argument("-p", "--ID_fields", dest="ID_fields",
-                        help="Field names for those that contain IDs.  Separate "
-                        "field names with a comma. "
-                        "Default: Head,Tail,RootHead,RootTail,ID,hostHaloID", 
-                        default=("Head,Tail,RootHead,RootTail,ID,hostHaloID"))
-    parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
-                        help="Conversion factor to go from a unique, "
-                        "per-snapshot halo index to a temporally unique haloID. "
-                        "Default: 1e12.", default=1e12)
-    parser.add_argument("-n", "--NHalos_test", dest="NHalos_test",
-                        help="Minimum number of halos to test. Default: "
-                        "10,000", default=10000, type=int)
-    parser.add_argument("-g", "--gen_data", dest="gen_data",
-                        help="Flag whether we want to generate data. If this " 
-                             "is set to 0, the tests will be run on the " 
-                             "`fname_out` sorted data that was created "
-                             "running on `fname_in`. Default: True.",
-                             default=1, type=int)
-
-    args = parser.parse_args()
-
-    # We allow the user to enter an arbitrary number of sort fields and fields
-    # that contain IDs.  They are etnered as a single string separated by
-    # commas so need to split them up into a list.
-    args.ID_fields = (args.ID_fields).split(',')
-    args.sort_fields = args.sort_fields.split(',')
-   
-    if not args.gen_data and (args.fname_in == default_fname_in or
-                              args.fname_out == default_fname_out):
-        print("You specified that you do not want to generate data and instead "
-              "want to test an already sorted HDF5 file.")
-        print("For this setting, you must specify the ORIGINAL UNSORTED HDF5 "
-              "trees using the --fname_in option and the SORTED HDF5 trees "
-              "using the --fname_out option.")
-        raise ValueError 
-
-    # Print some useful startup info. #
-    print("")
-    print("Running test functions")
-    print("Performing tests on a minimum of {0} halos."
-          .format(args.NHalos_test))
-    print("The HaloID field for each halo is '{0}'.".format(args.haloID_field))
-    print("Sorting on the {0} fields".format(args.sort_fields))
-    print("")
-
-    return vars(args)
-
 
 def my_test_sorted_order(fname_out=default_fname_out, haloID_field="ID", 
                          sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
@@ -523,7 +436,8 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
         ID_fields = haloID_field
 
         fs.forest_sorter(fname_in, fname_out, haloID_field,
-                         sort_fields, ID_fields, index_mult_factor)
+                         sort_fields, sort_direction, ID_fields, 
+                         index_mult_factor)
                          
         ID_fields = tmp_ID_fields  # Then put back the old argsion.
 
@@ -532,6 +446,7 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
     print("Input Unsorted Trees: {0}".format(fname_in))
     print("Output Sorted Trees: {0}".format(fname_out))
     print("Sort Fields: {0}".format(sort_fields))
+    print("Sort Direction: {0}".format(sort_direction))
     print("=================================")
     print("")
 
@@ -560,9 +475,18 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
 
 
 if __name__ == "__main__":
-    args = parse_inputs()
+   
+    fname_in=default_fname_in
+    fname_out=default_fname_out
+    haloID_field="ID"
+    sort_fields=["ForestID", "hostHaloID", "Mass_200mean"]
+    sort_direction=np.array([1,1,-1])
+    ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID", "hostHaloID"]
+    index_mult_factor=1e12
+    NHalos_test=10000
+    gen_data=1
 
     sort_direction=np.array([1,1,-1])
-    test_run(args["fname_in"], args["fname_out"], args["haloID_field"],
-             args["sort_fields"], sort_direction, args["ID_fields"], args["index_mult_factor"],
-             args["NHalos_test"], args["gen_data"])
+    test_run(fname_in, fname_out, haloID_field,
+             sort_fields, sort_direction, ID_fields, index_mult_factor,
+             NHalos_test, gen_data)

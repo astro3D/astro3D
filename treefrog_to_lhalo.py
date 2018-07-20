@@ -410,20 +410,20 @@ def fill_LHalo_properties(tree, f_in, halo_indices, current_offset, snapnum,
     tree["FirstHaloInFOFgroup"][current_offset:current_offset+NHalos_thissnap] = f_in["hostHaloID"][halo_indices]
     tree["NextHaloInFOFgroup"][current_offset:current_offset+NHalos_thissnap] = -1
 
-    '''
     all_hosthalo_inds = f_in["hostHaloID"][halo_indices]
     _, sub_and_host_inds = np.unique(all_hosthalo_inds, return_inverse=True)
     for ii in sub_and_host_inds:
         fof_ind = tree["FirstHaloInFOFgroup"][current_offset + ii]
         if fof_ind == current_offset + ii:
+            assert(tree["FirstHaloInFOFgroup"][fof_ind] == current_offset + ii)
             continue
 
         curr = fof_ind
         while tree["NextHaloInFOFgroup"][current_offset + curr] != -1:
+            print("Curr {0}".format(curr))
             curr = tree["NextHaloInFOFgroup"][current_offset + curr]
 
         tree["NextHaloInFOFgroup"][current_offset + curr] = current_offset + ii
-    '''            
 
     tree["Len"][current_offset:current_offset+NHalos_thissnap] = f_in["npart"][halo_indices]
     tree["M_Mean200"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200mean"][halo_indices]
