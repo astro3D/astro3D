@@ -300,7 +300,7 @@ def my_test_sorted_properties(args):
                     continue
 
                 indices = fs.get_sort_indices(f_in,
-                                              snap_key, args)
+                                              snap_key, args["sort_fields"])
 
                 input_data = f_in[snap_key][field][:]
                 input_data_sorted = input_data[indices]
@@ -443,7 +443,10 @@ def test_run(args=None, test_dir=None):
 
         tmp_ID_fields = args["ID_fields"]
         args["ID_fields"] = args["halo_id"]
-        fs.sort_and_write_file(args)
+
+        fs.forest_sorter(args["fname_in"], args["fname_out"], args["halo_id"],
+                         args["sort_fields"], args["ID_fields"],
+                         args["index_mult_factor"])
         args["ID_fields"] = tmp_ID_fields  # Then put back the old argsion.
 
     print("Checking that the produced temporal IDs are correct.")
