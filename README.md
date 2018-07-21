@@ -26,8 +26,8 @@ from the specified unsorted HDF5 trees. The number of halos tested on is
 handled by the `NHalos_test` variable. 
 
 If you wish to test your fully sorted trees after running `forest_sorter()`, 
-set `gen_data=0`, `fname_in` to the path of the *original unsorted* trees and 
-`fname_out` to the path of the *sorted* trees. 
+set `gen_data=0`, `fname_in` to the path of the **original unsorted** trees and 
+`fname_out` to the path of the **sorted** trees. 
 
 If the default test passes but your specific test fails please ensure that your data file is not
 corrupt.  Importantly, check that the snapshot keys are named appropriately.  We require the

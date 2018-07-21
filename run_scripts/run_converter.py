@@ -1,7 +1,7 @@
 """
 This file contains an example for running the `convert_indices` and
-`write_lhalo_binary` functions `converter.py`.  Refer to the documentation of 
-those function for full explanation of each variable. 
+`write_lhalo_binary` functions within`converter.py`.  Refer to the 
+documentation of those function for full explanation of each variable. 
 
 The default parameters are chosen to match the ASTRO3D Genesis trees as 
 produced by VELOCIraptor + Treefrog.
@@ -29,9 +29,9 @@ if __name__ == '__main__':
     ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID", "hostHaloID"]
     index_mult_factor=1e12
     
-    converter.convert_indices(fname_in, fname_out,
-                              haloID_field, forestID_field,
-                              ID_fields, index_mult_factor)
+    #converter.convert_indices(fname_in, fname_out,
+    #                          haloID_field, forestID_field,
+    #                          ID_fields, index_mult_factor)
 
     fname_in=fname_out # Use the correct LHalo indices HDF5 file.
     fname_out="/fred/oz004/jseiler/genesis/treefrog_trees/new_genesis_version_lhalo_binary"    
