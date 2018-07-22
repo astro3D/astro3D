@@ -36,5 +36,5 @@ if __name__ == '__main__':
     fname_in=fname_out # Use the correct LHalo indices HDF5 file.
     fname_out="/fred/oz004/jseiler/genesis/treefrog_trees/new_genesis_version_lhalo_binary"    
 
-    converter.write_lhalo_binary(fname_in, fname_out, 
-                                 haloID_field, forestID_field)
+    converter.create_lhalo_binary(fname_in, fname_out, 
+                                  haloID_field, forestID_field)

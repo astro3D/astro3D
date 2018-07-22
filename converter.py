@@ -324,8 +324,8 @@ def convert_indices(fname_in, fname_out,
         print("Updating took {0:.3f} seconds.".format(end_time - start_time))
 
 
-def write_lhalo_binary(fname_in, fname_out, haloID_field="ID", 
-                       forestID_field="ForestID"): 
+def create_lhalo_binary(fname_in, fname_out, haloID_field="ID", 
+                        forestID_field="ForestID"): 
     """
     Converts temporally unique tree IDs to ones that are forest-local as 
     required by the LHalo Trees format. 
@@ -598,4 +598,55 @@ def write_forest(fname_out, forest_halos):
     with open(fname_out, "ab") as f_out:
 
         f_out.write(forest_halos.tobytes())
-    exit()
+
+
+
+def convert_binary_to_hdf5(fname_in, fname_out):
+    """
+    Converts a binary LHalo Tree file to HDF5 format.
+
+    Parameters
+    ----------
+
+    fname_in, fname_out: String.
+        Path to the input LHalo binary tree and the path 
+        where the HDF5 tree will be saved.
+
+    Returns
+    ----------
+
+    None
+    """
+
+    LHalo_Struct = get_LHalo_datastruct()
+
+    with open(fname_in, "rb") as binary_file, \
+         h5py.File(fname_out, "w") as hdf5_file:
+
+        # First get header info from the binary file.
+        NTrees = np.fromfile(binary_file, np.dtype(np.int32), 1)[0]
+        NHalos = np.fromfile(binary_file, np.dtype(np.int32), 1)[0]
+        NHalosPerTree = np.fromfile(binary_file,
+                                    np.dtype((np.int32, NTrees)), 1)[0]
+
+        print("For file {0} there are {1} trees with {2} total halos"
+              .format(fname_in, NTrees, NHalos))
+
+        # Write the header information to the HDF5 file.
+        hdf5_file.create_group("Header")
+        hdf5_file["Header"].attrs.create("Ntrees", NTrees, dtype=np.int32)
+        hdf5_file["Header"].attrs.create("totNHalos", NHalos, dtype=np.int32)
+        hdf5_file["Header"].attrs.create("TreeNHalos", NHalosPerTree,
+                                         dtype=np.int32)
+
+        # Now loop over each tree and write the information to the HDF5 file.
+        for tree_idx in tqdm(range(NTrees)):
+            binary_tree = np.fromfile(binary_file, LHalo_Struct,
+                                      NHalosPerTree[tree_idx])
+
+            tree_name = "tree_{0:03d}".format(tree_idx)
+            hdf5_file.create_group(tree_name)
+
+            for subgroup_name in LHalo_Struct.names:
+                hdf5_file[tree_name][subgroup_name] = binary_tree[subgroup_name]
+
