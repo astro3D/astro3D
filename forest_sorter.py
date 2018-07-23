@@ -116,6 +116,18 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
     None.
     """
 
+    print("")
+    print("=================================")
+    print("Running Forest Sorter")
+    print("Input Unsorted Trees: {0}".format(fname_in))
+    print("Output Sorted Trees: {0}".format(fname_out))
+    print("Sort Fields: {0}".format(sort_fields))
+    print("Sort Direction: {0}".format(sort_direction))
+    print("Index Mult Factor: {0}".format(index_mult_factor))
+    print("=================================")
+    print("")
+
+
     with h5py.File(fname_in, "r") as f_in, \
          h5py.File(fname_out, "w") as f_out:
 
@@ -159,6 +171,10 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
             snapshot_indices[snap_key] = indices
             ID_maps[Snap_Nums[snap_key]] = oldIDs_to_newIDs
 
+            #f_out.create_dataset("newIDs", 
+            #                     list(ID_maps[Snap_Nums[snap_key]].values()))
+
+
         # For some ID fields (e.g., NextProgenitor), the value is -1. 
         # When we convert from the temporalID to a snapshot number, we subtract
         # 1 and divide by the multiplication factor (default 1e12), then cast
@@ -184,16 +200,15 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
         print("Now writing out the snapshots in the sorted order.")
         start_time = time.time()
 
+        # Don't use name `snap_key` because there could be other fields such as
+        # 'header'.
         for key in tqdm(f_in.keys()):
             cmn.copy_group(f_in, f_out, key)
 
-            #f_out.create_dataset("oldIDs", 
-            #                     list(ID_maps[Snap_Nums[snap_key]].keys()))
-
-            #f_out.create_dataset("newIDs", 
-            #                     list(ID_maps[Snap_Nums[snap_key]].values()))
-
-
+            if key in Snap_Keys:
+                dataset_name = "{0}/oldIDs".format(key)
+                f_out.create_dataset(dataset_name,
+                                               data=list(ID_maps[Snap_Nums[key]].keys()))
             for field in f_in[key]:
 
                 # Some keys (e.g., 'Header') don't have snapshots so need an

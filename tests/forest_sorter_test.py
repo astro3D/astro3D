@@ -245,8 +245,10 @@ def my_test_sorted_properties(fname_in=default_fname_in,
         print("Looping over each Snapshot")
         for snap_key in tqdm(Snap_Keys):  # Now let's check each field.
             for field in f_out[snap_key]:
-
                 if field in ID_fields:  # Ignore ID fields.
+                    continue
+
+                if field == "oldIDs":  # Original input doesn't have oldIDs.
                     continue
 
                 indices = fs.get_sort_indices(f_in,
@@ -455,24 +457,32 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
     print("")
 
 
+    print("")
     print("Checking that the produced temporal IDs are correct.")
     my_test_check_haloIDs(fname_in, fname_out, haloID_field, 
                           index_mult_factor, gen_data)
+    print("")
 
+
+    print("")
     print("Checking that the sort order is correct for the sort keys.")
-
     my_test_sorted_order(fname_out, haloID_field, 
                          sort_fields, sort_direction, gen_data)
+    print("")
 
+
+    print("")
     print("Checking that the sort order is correct for the halo properties.")
     my_test_sorted_properties(fname_in, fname_out,
                               haloID_field, sort_fields, sort_direction,
                               gen_data)
+    print("")
 
     print("")
     print("=================================")
     print("All tests passed!")
     print("=================================")
+    print("")
 
     if gen_data:
         cleanup(fname_in)
