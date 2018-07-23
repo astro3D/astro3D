@@ -7,7 +7,6 @@ from __future__ import print_function
 import numpy as np
 import h5py
 from tqdm import tqdm
-import argparse
 import time
 
 from genesis.utils import common as cmn
@@ -205,13 +204,12 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
         for key in tqdm(f_in.keys()):
             cmn.copy_group(f_in, f_out, key)
 
-            if key in Snap_Keys:
+            if key in Snap_Keys:                
                 try:
                     oldIDs = list(ID_maps[Snap_Nums[key]].keys())
                 except KeyError:
                     pass
                 else:
-                
                     dataset_name = "{0}/oldIDs".format(key)
                     f_out.create_dataset(dataset_name,
                                          data=oldIDs)
