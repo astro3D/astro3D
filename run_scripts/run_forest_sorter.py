@@ -23,6 +23,6 @@ if __name__ == '__main__':
     ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID", "hostHaloID"]
     index_mult_factor=1e12
 
-    forest_sorter(fname_in, fname_out, haloID_field,
-                  sort_fields, ID_fields,
-                  index_mult_factor, sort_direction) 
+    fs.forest_sorter(fname_in, fname_out, haloID_field,
+                     sort_fields, sort_direction, ID_fields,
+                     index_mult_factor) 

@@ -206,9 +206,16 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
             cmn.copy_group(f_in, f_out, key)
 
             if key in Snap_Keys:
-                dataset_name = "{0}/oldIDs".format(key)
-                f_out.create_dataset(dataset_name,
-                                               data=list(ID_maps[Snap_Nums[key]].keys()))
+                try:
+                    oldIDs = list(ID_maps[Snap_Nums[key]].keys())
+                except KeyError:
+                    pass
+                else:
+                
+                    dataset_name = "{0}/oldIDs".format(key)
+                    f_out.create_dataset(dataset_name,
+                                         data=oldIDs)
+
             for field in f_in[key]:
 
                 # Some keys (e.g., 'Header') don't have snapshots so need an
