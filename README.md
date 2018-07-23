@@ -54,10 +54,10 @@ This function takes the Treefrog trees with the LHalo corrected indices (from
 `convert_indices()`) and writes an LHalo Tree binary. This binary file is of
 the format:
 
-32-bit integer: `NTrees`, describing the number of trees in the file.
-32-bit integer: `TotNHalos`, describing the total number of halos within the
-file.
-`NTrees` 32-bit integers: `TreeNHalos`, describing the number of halos within each
+* 32-bit integer: `NTrees`, describing the number of trees in the file,
+* 32-bit integer: `TotNHalos`, describing the total number of halos within the
+file,
+* `NTrees` 32-bit integers: `TreeNHalos`, describing the number of halos within each
 tree.
 
 Following this header is `TotNHalos` halo entries with data format:
@@ -86,4 +86,8 @@ Following this header is `TotNHalos` halo entries with data format:
 * SnapNum,             32-bit integer, 
 * Filenr,              32-bit integer,
 * SubHaloIndex,        32-bit integer, 
-* SubHalfMass,         32-bit integer, 
+* SubHalfMass,         32-bit integer.
+
+
+See [LHaloTreeReader](https://github.com/manodeep/LHaloTreeReader) for an
+overview of the LHalo Tree merger pointers. 
