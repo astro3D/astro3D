@@ -10,12 +10,8 @@ produced by VELOCIraptor + Treefrog.
 #!/usr/bin:env python
 from __future__ import print_function
 import numpy as np
-import h5py
-from tqdm import tqdm
-import argparse
-import time
 
-from genesis.utils import converter 
+from genesis.utils import convert_indices as converter 
 
 if __name__ == '__main__':
     
@@ -29,12 +25,6 @@ if __name__ == '__main__':
     ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID", "hostHaloID"]
     index_mult_factor=1e12
     
-    #converter.convert_indices(fname_in, fname_out,
-    #                          haloID_field, forestID_field,
-    #                          ID_fields, index_mult_factor)
-
-    fname_in=fname_out # Use the correct LHalo indices HDF5 file.
-    fname_out="/fred/oz004/jseiler/genesis/treefrog_trees/new_genesis_version_lhalo_binary"    
-
-    converter.create_lhalo_binary(fname_in, fname_out, 
-                                  haloID_field, forestID_field)
+    converter.convert_indices(fname_in, fname_out,
+                              haloID_field, forestID_field,
+                              ID_fields, index_mult_factor)

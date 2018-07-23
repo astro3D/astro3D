@@ -4,7 +4,7 @@ This directory contains a number of useful tools and utilities for handling the 
 ASTRO3D Genesis simulations.  We have provided a number of example scripts to
 run these tools in the `run_scripts` directory.
 
-# Forest Sorter
+# forest_sorter
 
 This utility takes input HDF5 merger trees that have not been saved in any specific order and sorts
 them on a number of fields; usually an at least an ID field and a mass field.  The user can specify 
@@ -35,14 +35,55 @@ snapshot fields to include the word **snap** (case insensitive) and assume that 
 corresponding to the snapshot key is included as a single cluster towards the end of the key;
 **snap53_04** should correspond to snapshot number 04 for example. 
 
-**If the snapshot fields are named correctly and your data can be otherwise read in via h5py, please
+**If the snapshot fields are named correctly and your data can be otherwise read in via `h5py`, please
 email jseiler@swin.edu.au**
 
-# converter 
+# convert_indices 
 
 This utility takes the sorted HDF5 trees from `forest_sorter` and adjusts the
-halo IDs to match the requirements of LHalo trees.  That is, the function
-`convert_indices()` converts the IDs to ones that are local within each forest.  
-The function `write_LHalo_binary()` then writes these adjusted trees to a
-binary file with the LHalo tree structure, designed to be read by Semi-Analyti
-Models such as [SAGE](https://github.com/darrencroton/sage). 
+halo IDs to match the requirements of LHalo trees.  LHalo trees requires that
+these IDs are tree local and are the indices of the halos (rather than unique
+temporal IDs).
+
+The resulting LHalo compatible trees are saved as a HDF5 file with all other
+fields identical to the input Treefrog trees. 
+
+# treefrog_to_lhalo
+
+This function takes the Treefrog trees with the LHalo corrected indices (from
+`convert_indices()`) and writes an LHalo Tree binary. This binary file is of
+the format:
+
+32-bit integer: `NTrees`, describing the number of trees in the file.
+32-bit integer: `TotNHalos`, describing the total number of halos within the
+file.
+`NTrees` 32-bit integers: `TreeNHalos`, describing the number of halos within each
+tree.
+
+Following this header is `TotNHalos` halo entries with data format:
+
+* Descendant,          32-bit integer,
+* FirstProgenitor,     32-bit integer,
+* NextProgenitor,      32-bit integer,
+* FirstHaloInFOFgroup, 32-bit integer, 
+* NextHaloInFOFgroup,  32-bit integer, 
+* Len,                 32-bit integer,
+* M_Mean200,           32-bit float,
+* Mvir,                32-bit float,
+* M_TopHat,            32-bit float, 
+* Posx,                32-bit float,
+* Posy,                32-bit float,
+* Posz,                32-bit float,
+* Velx,                32-bit float, 
+* Vely,                32-bit float, 
+* Velz,                32-bit float, 
+* VelDisp,             32-bit float, 
+* Vmax,                32-bit float, 
+* Spinx,               32-bit float, 
+* Spiny,               32-bit float, 
+* Spinz,               32-bit float, 
+* MostBoundID,         64-bit integer, 
+* SnapNum,             32-bit integer, 
+* Filenr,              32-bit integer,
+* SubHaloIndex,        32-bit integer, 
+* SubHalfMass,         32-bit integer, 
