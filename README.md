@@ -51,7 +51,7 @@ fields identical to the input Treefrog trees.
 # treefrog_to_lhalo
 
 This function takes the Treefrog trees with the LHalo corrected indices (from
-`convert_indices()`) and writes an LHalo Tree binary. This binary file is of
+`convert_indices()`) and writes LHalo Tree binary/s. These binary files are of
 the format:
 
 * 32-bit integer: `NTrees`, describing the number of trees in the file,
@@ -62,32 +62,43 @@ tree.
 
 Following this header is `TotNHalos` halo entries with data format:
 
-* Descendant,          32-bit integer,
-* FirstProgenitor,     32-bit integer,
-* NextProgenitor,      32-bit integer,
-* FirstHaloInFOFgroup, 32-bit integer, 
-* NextHaloInFOFgroup,  32-bit integer, 
-* Len,                 32-bit integer,
-* M_Mean200,           32-bit float,
-* Mvir,                32-bit float,
-* M_TopHat,            32-bit float, 
-* Posx,                32-bit float,
-* Posy,                32-bit float,
-* Posz,                32-bit float,
-* Velx,                32-bit float, 
-* Vely,                32-bit float, 
-* Velz,                32-bit float, 
-* VelDisp,             32-bit float, 
-* Vmax,                32-bit float, 
-* Spinx,               32-bit float, 
-* Spiny,               32-bit float, 
-* Spinz,               32-bit float, 
-* MostBoundID,         64-bit integer, 
-* SnapNum,             32-bit integer, 
-* Filenr,              32-bit integer,
-* SubHaloIndex,        32-bit integer, 
-* SubHalfMass,         32-bit integer.
+* `Descendant`,          32-bit integer,
+* `FirstProgenitor`,     32-bit integer,
+* `NextProgenitor`,      32-bit integer,
+* `FirstHaloInFOFgroup`, 32-bit integer, 
+* `NextHaloInFOFgroup`,  32-bit integer, 
+* `Len`,                 32-bit integer,
+* `M_Mean200`,           32-bit float,
+* `Mvir`,                32-bit float,
+* `M_TopHat`,            32-bit float, 
+* `Posx`,                32-bit float,
+* `Posy`,                32-bit float,
+* `Posz`,                32-bit float,
+* `Velx`,                32-bit float, 
+* `Vely`,                32-bit float, 
+* `Velz`,                32-bit float, 
+* `VelDisp`,             32-bit float, 
+* `Vmax`,                32-bit float, 
+* `Spinx`,               32-bit float, 
+* `Spiny`,               32-bit float, 
+* `Spinz`,               32-bit float, 
+* `MostBoundID`,         64-bit integer, 
+* `SnapNum`,             32-bit integer, 
+* `Filenr`,              32-bit integer,
+* `SubHaloIndex`,        32-bit integer, 
+* `SubHalfMass`,         32-bit integer.
 
 
 See [LHaloTreeReader](https://github.com/manodeep/LHaloTreeReader) for an
-overview of the LHalo Tree merger pointers. 
+overview of the LHalo Tree merger pointers.
+
+The function is MPI compatible and the number of final number of files written
+is equivalent to the number of processors used to call the function.  These
+files are load balanced such that each one will have a similar number of halos
+(but not necessarily number of trees).  For example,
+
+```
+$ mpirun -np 4 python run_scripts/run_treefrog_to_lhalo.py
+```
+
+Would generate 4 LHalo Tree binary files. 
