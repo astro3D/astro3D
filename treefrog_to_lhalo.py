@@ -317,6 +317,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         last_snap_key = max(Snap_Nums, key=Snap_Nums.get)
 
         total_forests_to_process = np.unique(f_in[last_snap_key][forestID_field][:])
+        print("Total forests {0}".format(len(total_forests_to_process)))
         total_forests_to_process = total_forests_to_process[0:100]
 
         # If we're running in parallel, determine what forest IDs each
@@ -324,7 +325,10 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         if size > 1: 
             forests_to_process = determine_forests(NHalos_forest,
                                                    total_forests_to_process) 
-        
+       
+        else:
+            forests_to_process = total_forests_to_process
+ 
         filenr = rank
 
         # We first want to determine the number of forests, total number of
@@ -357,7 +361,9 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
                 forest_halos = np.zeros(NHalos, dtype=LHalo_Desc)
                 forest_halos = populate_forest(f_in, forest_halos, Snap_Keys,
-                                               Snap_Nums, forestID, NHalos_forest,
+                                               Snap_Nums, forestID, 
+                                               NHalos_forest,
+                                               NHalos_forest_offset,
                                                filenr) 
        
                 #print("Forest fully populated, now fixing up indices.")
@@ -501,7 +507,7 @@ def write_header(fname_out, Nforests, totNHalos, halos_per_forest):
 
 
 def populate_forest(f_in, forest_halos, Snap_Keys, Snap_Nums, forestID, 
-                    NHalos_forest, filenr): 
+                    NHalos_forest, NHalos_forest_offset, filenr): 
     """
     Takes an empty `forest_halos` structure and fills it with the halos
     corresponding to the passed `forestID`.
@@ -532,7 +538,11 @@ def populate_forest(f_in, forest_halos, Snap_Keys, Snap_Nums, forestID,
         Nested dictionary that contains the number of halos for each Forest at
         each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
         key.
-    
+
+    NHalos_forest_offset: Nested Dictionary. Required.
+        Nested dictionary that contains the offset for each Forest at each
+        snapshot. Outer-key is the ForestID and inner-key is the snapshot key.
+  
     filenr: Integer.
         The output file number this tree will be written to.
 
