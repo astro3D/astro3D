@@ -11,6 +11,12 @@ import os.path
 
 import time
 
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
 from genesis.utils import common as cmn
 
 
@@ -146,19 +152,29 @@ def fix_flybys(forest_halos, NHalos_root):
 
     # If there is only one FoF Halo, no changes need to be made.
     if len(root_halo_inds) == 1:
-        return forets_halos 
+        return forest_halos 
 
     # Find the 'true' FoF Halo.
     max_fof_mass_idx = np.argmax(forest_halos["Mvir"][root_halo_inds])
-    forest_halos["FirstHaloInFOFgroup"][root_halo_inds] = max_fof_mass_idx 
+
+    # Find those halos whose `FirstHaloInFOFgroup` is incorrect
+    flyby_ind = np.where(forest_halos["FirstHaloInFOFgroup"][root_halo_inds] 
+                         != max_fof_mass_idx)[0]
+    global_flyby_ind = root_halo_inds[flyby_ind]
+
+    # Update them and flip the `MostBoundID` to flag the flyby.
+    forest_halos["FirstHaloInFOFgroup"][global_flyby_ind] = max_fof_mass_idx 
+    forest_halos["MostBoundID"][global_flyby_ind] *= -1 
 
     # Update the `NextHaloInFOFgroup` chain the account for the new FoFs.
-    forest_halos = fix_nextfof(forest_halos, [0], 0, NHalos_root)
+    offset = 0
+    forest_halos = fix_nextsubhalo(forest_halos, [max_fof_mass_idx], offset, 
+                               NHalos_root)
 
     return forest_halos 
 
 
-def fix_nextfof(forest_halos, fof_groups, offset, NHalos):
+def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
     """
     Fixes the `NextHaloInFOFgroup` field for a single forest at a single
     snapshot. 
@@ -207,6 +223,7 @@ def fix_nextfof(forest_halos, fof_groups, offset, NHalos):
         forest_halos["NextHaloInFOFgroup"][halos_in_fof_global_inds[-1]] = -1 
 
     return forest_halos
+
 
 
 def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID", 
@@ -278,13 +295,16 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
   
         last_snap_key = max(Snap_Nums, key=Snap_Nums.get)
 
-        forests_to_process = np.unique(f_in[last_snap_key][forestID_field][:])
+        total_forests_to_process = np.unique(f_in[last_snap_key][forestID_field][:])
+        forests_to_process = determine_forests(NHalos_forest,
+                                               total_forests_to_process) 
+        exit()
         NForests = len(NHalos_forest.keys())
         print("Forests from unique {0}. Forest from keys "
               "{1}".format(len(forests_to_process), NForests))
         
         filenr = 0
-
+        forests_to_process = forests_to_process[0:10000]
         # We first want to determine the number of forests, total number of
         # halos in these forests, and number of halos per forest for each
         # forest we are processing.
@@ -305,26 +325,69 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
         # Now for each forest we want to populate the LHalos forest struct, fix
         # any IDs (e.g., flybys) and then write them out.
-        for forestID in forests_to_process:
 
+        with open(fname_out, "ab") as f_out:
+            for forestID in tqdm(forests_to_process):
+
+                NHalos = sum(NHalos_forest[forestID].values())
+                #print("For Forest {0} there are {1} halos.".format(forestID,
+                #      NHalos))
+
+                forest_halos = np.zeros(NHalos, dtype=LHalo_Desc)
+                forest_halos = populate_forest(f_in, forest_halos, Snap_Keys,
+                                               Snap_Nums, forestID, NHalos_forest,
+                                               NHalos_forest_offset, filenr) 
+       
+                #print("Forest fully populated, now fixing up indices.")
+                NHalos_root = NHalos_forest[forestID][last_snap_key]
+                forest_halos = fix_flybys(forest_halos, NHalos_root)
+
+                forest_halos = fix_nextprog(forest_halos)
+
+                forest_halos.tofile(f_out)
+
+
+
+def determine_forests(NHalos_forest, total_forests):
+
+    if rank == 0:
+        halos_per_forest = np.zeros(len(total_forests))    
+        for count, forestID in enumerate(total_forests):
+            # NHalos_forest is a nested dictionary accessed by each forestID.            
             NHalos = sum(NHalos_forest[forestID].values())
-            print("For Forest {0} there are {1} halos.".format(forestID,
-                  NHalos))
 
-            forest_halos = np.zeros(NHalos, dtype=LHalo_Desc)
-            forest_halos = populate_forest(f_in, forest_halos, Snap_Keys,
-                                           Snap_Nums, forestID, NHalos_forest,
-                                           NHalos_forest_offset, filenr) 
-   
-            print("Forest fully populated, now fixing up indices.")
-            NHalos_root = NHalos_forest[forestID][last_snap_key]
-            forest_halos = fix_flybys(forest_halos, NHalos_root)
+            halos_per_forest[count] = NHalos
 
-            forest_halos = fix_nextprog(forest_halos)
+        totNHalos = sum(halos_per_forest)
+        NHalo_target = totNHalos / size
+        forest_assignment = [] 
 
-            print("Writing out forest.")
-            write_forest(fname_out, forest_halos)
-            
+        for their_rank in range(size):
+            forest_assignment.append([])
+
+        rank_count = 0
+        halos_assigned = 0
+
+        for count, forestID in enumerate(total_forests):
+            halos_assigned += sum(NHalos_forest[forestID].values())
+            forest_assignment[rank_count].append(forestID)
+
+            if halos_assigned > NHalo_target:
+                print("Rank {0} has been assigned {1} forests with {2} total "
+                      "halos.".format(rank_count,
+                                      len(forest_assignment[rank_count]),
+                                      halos_assigned))
+                rank_count += 1
+                halos_assigned = 0
+
+        print("Rank {0} has been assigned {1} forests with {2} total "
+              "halos.".format(rank_count,
+                              len(forest_assignment[rank_count]),
+                              halos_assigned))
+        
+    comm.Barrier()
+
+    return forest_assignment[rank]
 
 def write_header(fname_out, Nforests, totNHalos, halos_per_forest):
     """
@@ -419,7 +482,7 @@ def fill_LHalo_properties(forest_halos, f_in, halo_indices, current_offset, snap
 
     all_hosthalo_inds = f_in["hostHaloID"][halo_indices]
     fof_groups = np.unique(all_hosthalo_inds)
-    forest_halos = fix_nextfof(forest_halos, fof_groups, current_offset,
+    forest_halos = fix_nextsubhalo(forest_halos, fof_groups, current_offset,
                                 NHalos_thissnap)
 
     forest_halos["Len"][current_offset:current_offset+NHalos_thissnap] = f_in["npart"][halo_indices]
@@ -442,7 +505,7 @@ def fill_LHalo_properties(forest_halos, f_in, halo_indices, current_offset, snap
     forest_halos["Spiny"][current_offset:current_offset+NHalos_thissnap] = f_in["Ly"][halo_indices]
     forest_halos["Spinz"][current_offset:current_offset+NHalos_thissnap] = f_in["Lz"][halo_indices]
     
-    forest_halos["MostBoundID"] [current_offset:current_offset+NHalos_thissnap]= f_in["ID"][halo_indices] ##
+    forest_halos["MostBoundID"][current_offset:current_offset+NHalos_thissnap]= f_in["oldIDs"][halo_indices]
 
     forest_halos["SnapNum"][current_offset:current_offset+NHalos_thissnap]= snapnum 
     forest_halos["Filenr"][current_offset:current_offset+NHalos_thissnap] = filenr 
@@ -453,15 +516,6 @@ def fill_LHalo_properties(forest_halos, f_in, halo_indices, current_offset, snap
     current_offset += NHalos_thissnap
 
     return forest_halos, current_offset 
-
-
-def write_forest(fname_out, forest_halos):
-   
-     
-    with open(fname_out, "ab") as f_out:
-
-        f_out.write(forest_halos.tobytes())
-
 
 
 def convert_binary_to_hdf5(fname_in, fname_out):
