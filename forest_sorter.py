@@ -146,7 +146,6 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
 
             # Need to get the indices that sort the data according to the
             # specified keys.
-
             indices = get_sort_indices(f_in, snap_key, sort_fields,
                                        sort_direction)
 

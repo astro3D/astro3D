@@ -135,7 +135,7 @@ def get_snapkeys_and_nums(file_keys):
     Snap_Keys: List of strings.
         Names of the snapshot keys within the passed keys.
 
-    Snap_Num: Dictionary of integers keyed by Snap_Keys.
+    Snap_Nums: Dictionary of integers keyed by `Snap_Keys`.
         Snapshot number of each snapshot key.
 
     Examples
