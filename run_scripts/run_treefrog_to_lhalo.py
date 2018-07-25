@@ -23,6 +23,7 @@ if __name__ == '__main__':
     fname_out="/fred/oz004/jseiler/genesis/treefrog_trees/new_genesis_version_lhalo_binary"
     haloID_field="ID"
     forestID_field="ForestID"
+    Nforests=1e12
 
     frog_to_l.treefrog_to_lhalo(fname_in, fname_out, 
-                                haloID_field, forestID_field)
+                                haloID_field, forestID_field, Nforests)

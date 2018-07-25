@@ -247,7 +247,7 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
 
 
 def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID", 
-                      forestID_field="ForestID"): 
+                      forestID_field="ForestID", Nforests=1e12): 
     """
     Takes the Treefrog trees that have had their IDs corrected to be in LHalo
     format and saves them in LHalo binary format.
@@ -279,6 +279,10 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
     forestID_field: String. Default: 'ForestID'.
         Field name within the HDF5 file that corresponds to forest ID. 
+
+    Nforests: Integer. Default: 1e12.
+        The number of forests to be processed.  The default value is chosen to
+        process all the trees. 
 
     Returns
     ----------
@@ -318,7 +322,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
         total_forests_to_process = np.unique(f_in[last_snap_key][forestID_field][:])
         print("Total forests {0}".format(len(total_forests_to_process)))
-        total_forests_to_process = total_forests_to_process[0:10000]
+        total_forests_to_process = total_forests_to_process[0:int(Nforests)]
 
         # If we're running in parallel, determine what forest IDs each
         # processor is handling.
