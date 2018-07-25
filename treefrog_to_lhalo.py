@@ -318,7 +318,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
         total_forests_to_process = np.unique(f_in[last_snap_key][forestID_field][:])
         print("Total forests {0}".format(len(total_forests_to_process)))
-        total_forests_to_process = total_forests_to_process[0:100]
+        total_forests_to_process = total_forests_to_process[0:10000]
 
         # If we're running in parallel, determine what forest IDs each
         # processor is handling.
@@ -350,13 +350,15 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         write_header(my_fname_out, len(forests_to_process), totNHalos,
                      global_halos_per_forest)
 
+        start_time = time.time()
         # Now for each forest we want to populate the LHalos forest struct, fix
         # any IDs (e.g., flybys) and then write them out.
         with open(my_fname_out, "ab") as f_out:
             for count, forestID in enumerate(forests_to_process):
-                if count % 1000 == 0:
-                    print("Rank {0} processed {1} Forests.".format(rank,
-                                                                   count))
+                if count % 100 == 0:
+                    print("Rank {0} processed {1} Forests ({2:.2f} seconds "
+                          "alapsed).".format(rank, count, 
+                                             time.time()-start_time))
                 NHalos = sum(NHalos_forest[forestID].values())
 
                 forest_halos = np.zeros(NHalos, dtype=LHalo_Desc)
@@ -388,6 +390,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
     print("Rank {0} has finished writing out {0} Forests to "
           "{1}".format(len(forests_to_process), my_fname_out))        
+    print("Total time elapsed: {0:.2f} Seconds.".format(time.time()-start_time))
 
 
 def determine_forests(NHalos_forest, all_forests):
@@ -443,7 +446,7 @@ def determine_forests(NHalos_forest, all_forests):
             if halos_assigned > NHalo_target:
                 print("Rank {0} has been assigned {1} forests with {2} total "
                       "halos.".format(rank_count,
-                                      len(forest_assignment[rank_count]),
+                                      len(forest_assignment),
                                       halos_assigned))
 
                 # Pass the assigned forest to the correct processor. 

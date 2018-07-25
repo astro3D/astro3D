@@ -92,7 +92,7 @@ Following this header is `TotNHalos` halo entries with data format:
 See [LHaloTreeReader](https://github.com/manodeep/LHaloTreeReader) for an
 overview of the LHalo Tree merger pointers.
 
-The function is MPI compatible and the number of final number of files written
+The function is MPI compatible and the final number of files written
 is equivalent to the number of processors used to call the function.  These
 files are load balanced such that each one will have a similar number of halos
 (but not necessarily number of trees).  For example,
