@@ -357,7 +357,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
             for count, forestID in enumerate(forests_to_process):
                 if count % 100 == 0:
                     print("Rank {0} processed {1} Forests ({2:.2f} seconds "
-                          "alapsed).".format(rank, count, 
+                          "elapsed).".format(rank, count, 
                                              time.time()-start_time))
                 NHalos = sum(NHalos_forest[forestID].values())
 
@@ -388,8 +388,8 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                 # All done! Append to the file.
                 forest_halos.tofile(f_out)
 
-    print("Rank {0} has finished writing out {0} Forests to "
-          "{1}".format(len(forests_to_process), my_fname_out))        
+    print("Rank {0} has finished writing out {1} Forests to "
+          "{2}".format(rank, len(forests_to_process), my_fname_out))        
     print("Total time elapsed: {0:.2f} Seconds.".format(time.time()-start_time))
 
 
