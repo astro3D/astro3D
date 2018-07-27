@@ -247,7 +247,7 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
 
 
 def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID", 
-                      forestID_field="ForestID", Nforests=1e12): 
+                      forestID_field="ForestID", Nforests=None): 
     """
     Takes the Treefrog trees that have had their IDs corrected to be in LHalo
     format and saves them in LHalo binary format.
@@ -280,9 +280,9 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
     forestID_field: String. Default: 'ForestID'.
         Field name within the HDF5 file that corresponds to forest ID. 
 
-    Nforests: Integer. Default: 1e12.
-        The number of forests to be processed.  The default value is chosen to
-        process all the trees. 
+    Nforests: Integer. Default: None.
+        The number of forests to be processed. If `None` is passed then all
+        forests are processed.
 
     Returns
     ----------
@@ -296,9 +296,10 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         print("Going through the LHalo indices corrected Treefrog trees and " 
               "saving in LHalo binary format.") 
         print("Input Trees: {0}".format(fname_in))
-        print("Output LHalo ID Trees: {0}".format(fname_out))
+        print("Output LHalo Trees: {0}".format(fname_out))
         print("ForestID Field Name: {0}".format(forestID_field))
         print("Number of Processors: {0}".format(size))
+        print("Number of forests to process: {0}".format(Nforests))
         print("=================================")
         print("")
    
@@ -322,7 +323,9 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
         total_forests_to_process = np.unique(f_in[last_snap_key][forestID_field][:])
         print("Total forests {0}".format(len(total_forests_to_process)))
-        total_forests_to_process = total_forests_to_process[0:int(Nforests)]
+
+        if Nforests:
+            total_forests_to_process = total_forests_to_process[0:int(Nforests)]
 
         # If we're running in parallel, determine what forest IDs each
         # processor is handling.
@@ -355,11 +358,12 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                      global_halos_per_forest)
 
         start_time = time.time()
+        hubble_h = get_hubble_h(f_in)
         # Now for each forest we want to populate the LHalos forest struct, fix
         # any IDs (e.g., flybys) and then write them out.
         with open(my_fname_out, "ab") as f_out:
             for count, forestID in enumerate(forests_to_process):
-                if count % 100 == 0:
+                if count % 200 == 0:
                     print("Rank {0} processed {1} Forests ({2:.2f} seconds "
                           "elapsed).".format(rank, count, 
                                              time.time()-start_time))
@@ -370,7 +374,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                                                Snap_Nums, forestID, 
                                                NHalos_forest,
                                                NHalos_forest_offset,
-                                               filenr) 
+                                               filenr, hubble_h) 
        
                 #print("Forest fully populated, now fixing up indices.")
                 NHalos_root = NHalos_forest[forestID][last_snap_key]
@@ -514,7 +518,7 @@ def write_header(fname_out, Nforests, totNHalos, halos_per_forest):
 
 
 def populate_forest(f_in, forest_halos, Snap_Keys, Snap_Nums, forestID, 
-                    NHalos_forest, NHalos_forest_offset, filenr): 
+                    NHalos_forest, NHalos_forest_offset, filenr, hubble_h): 
     """
     Takes an empty `forest_halos` structure and fills it with the halos
     corresponding to the passed `forestID`.
@@ -583,13 +587,13 @@ def populate_forest(f_in, forest_halos, Snap_Keys, Snap_Nums, forestID,
                                                            halos_forest_inds, 
                                                            halos_offset,
                                                            Snap_Nums[snap_key],
-                                                           filenr)
+                                                           filenr, hubble_h)
 
     return forest_halos
 
 
 def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
-                          snap_num, filenr):
+                          snap_num, filenr, hubble_h):
     """
     Grabs all the properties from the input HDF5 file for the current snapshot. 
 
@@ -634,7 +638,8 @@ def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
     """
 
     NHalos_thissnap = len(halo_indices)
-    
+    scale_factor = f_in.attrs['scalefactor']   
+ 
     forest_halos["Descendant"][current_offset:current_offset+NHalos_thissnap] = f_in["Head"][halo_indices]
     forest_halos["FirstProgenitor"][current_offset:current_offset+NHalos_thissnap]  = f_in["Tail"][halo_indices]
     
@@ -654,15 +659,18 @@ def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
     forest_halos = fix_nextsubhalo(forest_halos, fof_groups, current_offset,
                                    NHalos_thissnap)
 
+    # All merger pointers are now done, read in the halo properties.
     forest_halos["Len"][current_offset:current_offset+NHalos_thissnap] = f_in["npart"][halo_indices]
-    forest_halos["M_Mean200"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200mean"][halo_indices]
-    forest_halos["Mvir"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200crit"][halo_indices] 
-    forest_halos["M_TopHat"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200crit"][halo_indices] 
+    forest_halos["M_Mean200"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200mean"][halo_indices] * hubble_h
+    forest_halos["Mvir"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200crit"][halo_indices] * hubble_h 
+    forest_halos["M_TopHat"][current_offset:current_offset+NHalos_thissnap] = f_in["Mass_200crit"][halo_indices] * hubble_h 
 
-    forest_halos["Posx"][current_offset:current_offset+NHalos_thissnap] = f_in["Xc"][halo_indices]
-    forest_halos["Posy"][current_offset:current_offset+NHalos_thissnap] = f_in["Yc"][halo_indices]
-    forest_halos["Posz"][current_offset:current_offset+NHalos_thissnap] = f_in["Zc"][halo_indices]
+    # Positions are in Co-moving Units #
+    forest_halos["Posx"][current_offset:current_offset+NHalos_thissnap] = f_in["Xc"][halo_indices] * hubble_h / scale_factor
+    forest_halos["Posy"][current_offset:current_offset+NHalos_thissnap] = f_in["Yc"][halo_indices] * hubble_h / scale_factor
+    forest_halos["Posz"][current_offset:current_offset+NHalos_thissnap] = f_in["Zc"][halo_indices] * hubble_h / scale_factor
 
+    # Velocities are in Physical Units #
     forest_halos["Velx"][current_offset:current_offset+NHalos_thissnap] = f_in["VXc"][halo_indices]
     forest_halos["Vely"][current_offset:current_offset+NHalos_thissnap] = f_in["VYc"][halo_indices]
     forest_halos["Velz"][current_offset:current_offset+NHalos_thissnap] = f_in["VZc"][halo_indices]
@@ -670,9 +678,18 @@ def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
     forest_halos["VelDisp"][current_offset:current_offset+NHalos_thissnap] = f_in["sigV"][halo_indices]
     forest_halos["Vmax"][current_offset:current_offset+NHalos_thissnap]  = f_in["Vmax"][halo_indices]
 
-    forest_halos["Spinx"][current_offset:current_offset+NHalos_thissnap] = f_in["Lx"][halo_indices]
-    forest_halos["Spiny"][current_offset:current_offset+NHalos_thissnap] = f_in["Ly"][halo_indices]
-    forest_halos["Spinz"][current_offset:current_offset+NHalos_thissnap] = f_in["Lz"][halo_indices]
+    # The 'spin' parameter in LHalo Tree is the Angular Momentum divided by the
+    # total mass.
+    Mvir = forest_halos["Mvir"][current_offset:current_offset+NHalos_thissnap]
+
+    forest_halos["Spinx"][current_offset:current_offset+NHalos_thissnap] = \
+    f_in["Lx"][halo_indices] * hubble_h * hubble_h / Mvir
+
+    forest_halos["Spiny"][current_offset:current_offset+NHalos_thissnap] = \
+    f_in["Ly"][halo_indices] * hubble_h * hubble_h / Mvir
+
+    forest_halos["Spinz"][current_offset:current_offset+NHalos_thissnap] = \
+    f_in["Lz"][halo_indices] * hubble_h * hubble_h / Mvir
     
     forest_halos["MostBoundID"][current_offset:current_offset+NHalos_thissnap]= f_in["oldIDs"][halo_indices]
 
@@ -736,3 +753,23 @@ def convert_binary_to_hdf5(fname_in, fname_out):
             for subgroup_name in LHalo_Struct.names:
                 hdf5_file[tree_name][subgroup_name] = binary_tree[subgroup_name]
 
+
+def get_hubble_h(f_in):
+    """
+    Gets the value of Hubble little h. 
+
+    Parameters
+    ----------
+
+    f_in: Open HDF5 File. 
+        The open HDF5 file we're reading the data from.
+
+    Returns
+    ----------
+
+    hubble_h: Float.
+        The value of Hubble little h for the given cosmology. 
+    """
+    hubble_h = f_in["Header"]["Cosmology"].attrs["h_val"]
+
+    return hubble_h

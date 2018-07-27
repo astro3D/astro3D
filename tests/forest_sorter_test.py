@@ -487,6 +487,7 @@ def test_run(fname_in=default_fname_in, fname_out=default_fname_out,
     if gen_data:
         cleanup(fname_in)
 
+
 if __name__ == '__main__':
     """
     Example script for running tests on your own data. 
