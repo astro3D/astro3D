@@ -6,7 +6,7 @@ Authors: Jacob Seiler, Manodeep Sinha
 from __future__ import print_function
 import numpy as np
 import h5py
-from tqdm import tqdm
+from tqdm import trange 
 import os.path
 
 import time
@@ -148,31 +148,34 @@ def fix_flybys(forest_halos, NHalos_root):
     """
 
     # Since we're at the root snapshot, the indexing will start from 0.
-    root_halo_inds = np.arange(NHalos_root)
-    root_halos = forest_halos[root_halo_inds]
+    fof_halo_inds = np.unique(forest_halos["FirstHaloInFOFgroup"][0:NHalos_root])
+    fof_halos = forest_halos[fof_halo_inds]
+
+    '''
+    print("FirstHaloInFOFgroup {0}".format(forest_halos["FirstHaloInFOFgroup"][0:NHalos_root]))
+    print("FoF inds {0}".format(fof_halo_inds))
+    '''
 
     # If there is only one FoF Halo, no changes need to be made.
-    if len(root_halo_inds) == 1:
-        return forest_halos 
+    if len(fof_halo_inds) == 1:
+        return forest_halos, None, None 
 
     # Find the 'true' FoF Halo.
-    max_fof_mass_idx = np.argmax(forest_halos["Mvir"][root_halo_inds])
+    true_fof_idx = np.argmax(fof_halos["Mvir"])
+    global_true_fof_idx = fof_halo_inds[true_fof_idx] 
 
     # Find those halos whose `FirstHaloInFOFgroup` is incorrect
-    flyby_ind = np.where(forest_halos["FirstHaloInFOFgroup"][root_halo_inds] 
-                         != max_fof_mass_idx)[0]
-    global_flyby_ind = root_halo_inds[flyby_ind]
+    flyby_ind = np.where(fof_halos["FirstHaloInFOFgroup"] 
+                         != global_true_fof_idx)[0]
+    global_flyby_ind = fof_halo_inds[flyby_ind]
 
-    # Update them and flip the `MostBoundID` to flag the flyby.
-    forest_halos["FirstHaloInFOFgroup"][global_flyby_ind] = max_fof_mass_idx 
+    #print("Flyby inds {0}\tglobal_flyby_inds {1}".format(flyby_ind, global_flyby_ind))
+
+    # Update the flybys and flip the `MostBoundID` to flag the flyby.
+    forest_halos["FirstHaloInFOFgroup"][0:NHalos_root] = global_true_fof_idx 
     forest_halos["MostBoundID"][global_flyby_ind] *= -1 
 
-    # Update the `NextHaloInFOFgroup` chain the account for the new FoFs.
-    offset = 0
-    forest_halos = fix_nextsubhalo(forest_halos, [max_fof_mass_idx], offset, 
-                                   NHalos_root)
-
-    return forest_halos 
+    return forest_halos, global_true_fof_idx, global_flyby_ind
 
 
 def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
@@ -376,9 +379,45 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                                                NHalos_forest_offset,
                                                filenr, hubble_h) 
        
-                #print("Forest fully populated, now fixing up indices.")
                 NHalos_root = NHalos_forest[forestID][last_snap_key]
-                forest_halos = fix_flybys(forest_halos, NHalos_root)
+                forest_halos, true_fof_idx, flyby_inds = fix_flybys(forest_halos,
+                                                                    NHalos_root)
+
+                # First check if there were any flybys.
+                if true_fof_idx:
+                    # Update the `NextHaloInFOFgroup` chain the account for the
+                    # FoFs after fixing the flybys. 
+                    # We do this by starting at the main FoF group and moving until we reach
+                    # the end (`NextHaloInFOFgroup = -1`).  Then we attach the first flyby halo
+                    # onto the end.  We then move down THAT flyby's chain and repeat the
+                    # process. 
+                    next_in_chain = forest_halos["NextHaloInFOFgroup"][true_fof_idx]
+                    curr_halo = true_fof_idx
+
+                    '''
+                    print("Before")
+                    print(forest_halos["NextHaloInFOFgroup"][0:NHalos_root])
+                    '''
+
+                    for flyby_ind in flyby_inds:
+                        #print("Flyby_ind {0}".format(flyby_ind))
+                        while next_in_chain != -1:
+                            #print("next_in_chain {0}".format(next_in_chain))
+                            curr_halo = next_in_chain
+                            next_in_chain = forest_halos["NextHaloInFOFgroup"][next_in_chain]
+                        forest_halos["NextHaloInFOFgroup"][curr_halo] = flyby_ind
+                        next_in_chain = flyby_ind
+
+                    assert(len(np.where(forest_halos["NextHaloInFOFgroup"][0:NHalos_root] \
+                                        == -1)[0]) == 1)
+
+                    '''
+                    print("After")
+                    print("NextHalo")
+                    print(forest_halos["NextHaloInFOFgroup"][0:NHalos_root])
+                    print("FirstHalo")
+                    print(forest_halos["FirstHaloInFOFgroup"][0:NHalos_root])
+                    '''
 
                 forest_halos = fix_nextprog(forest_halos)
 
@@ -469,9 +508,6 @@ def determine_forests(NHalos_forest, all_forests):
     else: 
         # All other ranks wait to receive their assignments.
         my_forest_assignment = comm.recv(source=0, tag=1)
-
-    print("I am rank {0} and I have received {1} " 
-          "forests.".format(rank, len(my_forest_assignment)))
 
     return my_forest_assignment 
 
@@ -674,35 +710,31 @@ def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
     forest_halos["Velx"][current_offset:current_offset+NHalos_thissnap] = f_in["VXc"][halo_indices]
     forest_halos["Vely"][current_offset:current_offset+NHalos_thissnap] = f_in["VYc"][halo_indices]
     forest_halos["Velz"][current_offset:current_offset+NHalos_thissnap] = f_in["VZc"][halo_indices]
-
     forest_halos["VelDisp"][current_offset:current_offset+NHalos_thissnap] = f_in["sigV"][halo_indices]
     forest_halos["Vmax"][current_offset:current_offset+NHalos_thissnap]  = f_in["Vmax"][halo_indices]
 
     # The 'spin' parameter in LHalo Tree is the Angular Momentum divided by the
     # total mass.
-    Mvir = forest_halos["Mvir"][current_offset:current_offset+NHalos_thissnap]
+    M_tot = f_in["Mass_tot"][halo_indices]
 
     forest_halos["Spinx"][current_offset:current_offset+NHalos_thissnap] = \
-    f_in["Lx"][halo_indices] * hubble_h * hubble_h / Mvir
+    f_in["Lx"][halo_indices] * hubble_h * hubble_h / M_tot
 
     forest_halos["Spiny"][current_offset:current_offset+NHalos_thissnap] = \
-    f_in["Ly"][halo_indices] * hubble_h * hubble_h / Mvir
+    f_in["Ly"][halo_indices] * hubble_h * hubble_h / M_tot
 
     forest_halos["Spinz"][current_offset:current_offset+NHalos_thissnap] = \
-    f_in["Lz"][halo_indices] * hubble_h * hubble_h / Mvir
+    f_in["Lz"][halo_indices] * hubble_h * hubble_h / M_tot
     
     forest_halos["MostBoundID"][current_offset:current_offset+NHalos_thissnap]= f_in["oldIDs"][halo_indices]
-
     forest_halos["SnapNum"][current_offset:current_offset+NHalos_thissnap]= snap_num 
     forest_halos["Filenr"][current_offset:current_offset+NHalos_thissnap] = filenr 
        
     forest_halos["SubHaloIndex"][current_offset:current_offset+NHalos_thissnap] = -1 ## 
     forest_halos["SubHalfMass"][current_offset:current_offset+NHalos_thissnap] = -1 ## 
-
     current_offset += NHalos_thissnap
 
-    return forest_halos, current_offset 
-
+    return forest_halos, current_offset
 
 def convert_binary_to_hdf5(fname_in, fname_out):
     """
@@ -743,7 +775,7 @@ def convert_binary_to_hdf5(fname_in, fname_out):
                                          dtype=np.int32)
 
         # Now loop over each tree and write the information to the HDF5 file.
-        for tree_idx in tqdm(range(NTrees)):
+        for tree_idx in trange(NTrees):
             binary_tree = np.fromfile(binary_file, LHalo_Struct,
                                       NHalosPerTree[tree_idx])
 
