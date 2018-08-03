@@ -121,9 +121,6 @@ def fix_flybys(forest_halos, NHalos_root):
     'True' FoF halo and update the Treefrog-equivalent field of
     `FirstHaloInFOFgroup` to point to this most massive halo. 
 
-    Since we are adding an extra halo to the FoF group of the root snapshot, we
-    also update the `NextHaloInFOFgroup` field. 
-
     ..note::
         We pass all halos within the forest to this function but only those at
         the root snapshot are altered. 
@@ -145,16 +142,19 @@ def fix_flybys(forest_halos, NHalos_root):
                   `get_LHalo_datastruct()`
         The forest halos with updated `FirstHaloInFOFgroup` and
         `NextHaloInFOFgroup` fields. 
+
+    global_true_fof_idx: Integer.
+        The forest-local index corresponding to the 'true' FoF halo for this
+        forest.
+
+    global_flyby_ind: List of integers.
+        The forest-local indices corresponding to those FoF halos that were
+        flagged as flybys.
     """
 
     # Since we're at the root snapshot, the indexing will start from 0.
     fof_halo_inds = np.unique(forest_halos["FirstHaloInFOFgroup"][0:NHalos_root])
     fof_halos = forest_halos[fof_halo_inds]
-
-    '''
-    print("FirstHaloInFOFgroup {0}".format(forest_halos["FirstHaloInFOFgroup"][0:NHalos_root]))
-    print("FoF inds {0}".format(fof_halo_inds))
-    '''
 
     # If there is only one FoF Halo, no changes need to be made.
     if len(fof_halo_inds) == 1:
@@ -168,8 +168,6 @@ def fix_flybys(forest_halos, NHalos_root):
     flyby_ind = np.where(fof_halos["FirstHaloInFOFgroup"] 
                          != global_true_fof_idx)[0]
     global_flyby_ind = fof_halo_inds[flyby_ind]
-
-    #print("Flyby inds {0}\tglobal_flyby_inds {1}".format(flyby_ind, global_flyby_ind))
 
     # Update the flybys and flip the `MostBoundID` to flag the flyby.
     forest_halos["FirstHaloInFOFgroup"][0:NHalos_root] = global_true_fof_idx 
@@ -218,16 +216,9 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
         # Find those halos within the snapshot we're altering in this FoF group.
         # We search only over the snapshot (offset -> offset+NHalos) to
         # increase efficiency for very large trees. 
-        #print("FoF {0}".format(fof))
         halos_in_fof = np.where(forest_halos["FirstHaloInFOFgroup"][offset:offset+NHalos] == fof)[0]
         halos_in_fof_global_inds = halos_in_fof + offset
 
-        '''
-        print("Offset {0}".format(offset))
-        print("NHalos {0}".format(NHalos))
-        print("halos_in_fof {0}".format(halos_in_fof))
-        print("halos_in_fof_global {0}".format(halos_in_fof_global_inds))
-        '''
         # The first halo will point to index 1 and so on. 
         nexthalo = np.arange(offset+min(halos_in_fof)+1,
                              offset+min(halos_in_fof)+len(halos_in_fof)+1) 
@@ -235,18 +226,7 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
         # The final halo terminates with -1.
         forest_halos["NextHaloInFOFgroup"][halos_in_fof_global_inds[-1]] = -1 
 
-        '''
-        if fof == 547:
-            print("Offset {0}".format(offset))
-            print("NHalos {0}".format(NHalos))
-            print("halos_in_fof {0}".format(halos_in_fof))
-            print("halos_in_fof_global {0}".format(halos_in_fof_global_inds))
-            print(halos_in_fof_global_inds[-1])            
-            print(forest_halos["NextHaloInFOFgroup"][halos_in_fof_global_inds])
-            print(forest_halos["NextHaloInFOFgroup"][halos_in_fof_global_inds[-1]])
-        '''
     return forest_halos
-
 
 
 def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID", 
@@ -366,7 +346,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         # any IDs (e.g., flybys) and then write them out.
         with open(my_fname_out, "ab") as f_out:
             for count, forestID in enumerate(forests_to_process):
-                if count % 200 == 0:
+                if count % 500 == 0:
                     print("Rank {0} processed {1} Forests ({2:.2f} seconds "
                           "elapsed).".format(rank, count, 
                                              time.time()-start_time))
@@ -383,21 +363,15 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                 forest_halos, true_fof_idx, flyby_inds = fix_flybys(forest_halos,
                                                                     NHalos_root)
 
-                # First check if there were any flybys.
+                # Now if there were any flybys, we need to update the
+                # `NextHaloInFOFgroup` chain to account for them.
                 if true_fof_idx:
-                    # Update the `NextHaloInFOFgroup` chain the account for the
-                    # FoFs after fixing the flybys. 
                     # We do this by starting at the main FoF group and moving until we reach
                     # the end (`NextHaloInFOFgroup = -1`).  Then we attach the first flyby halo
                     # onto the end.  We then move down THAT flyby's chain and repeat the
                     # process. 
                     next_in_chain = forest_halos["NextHaloInFOFgroup"][true_fof_idx]
                     curr_halo = true_fof_idx
-
-                    '''
-                    print("Before")
-                    print(forest_halos["NextHaloInFOFgroup"][0:NHalos_root])
-                    '''
 
                     for flyby_ind in flyby_inds:
                         #print("Flyby_ind {0}".format(flyby_ind))
@@ -410,14 +384,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
                     assert(len(np.where(forest_halos["NextHaloInFOFgroup"][0:NHalos_root] \
                                         == -1)[0]) == 1)
-
-                    '''
-                    print("After")
-                    print("NextHalo")
-                    print(forest_halos["NextHaloInFOFgroup"][0:NHalos_root])
-                    print("FirstHalo")
-                    print(forest_halos["FirstHaloInFOFgroup"][0:NHalos_root])
-                    '''
+                # Flybys and `NextHaloInFOFgroup` now fixed.
 
                 forest_halos = fix_nextprog(forest_halos)
 
@@ -447,7 +414,7 @@ def determine_forests(NHalos_forest, all_forests):
     ..note::
         Since we do not split trees across processors, this function will
         result in processors having an unequal number of trees (but similar
-        total number of halos). 
+        total number of halos) across processors.
  
     Parameters
     ----------
@@ -736,6 +703,7 @@ def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
 
     return forest_halos, current_offset
 
+
 def convert_binary_to_hdf5(fname_in, fname_out):
     """
     Converts a binary LHalo Tree file to HDF5 format.
@@ -802,6 +770,7 @@ def get_hubble_h(f_in):
     hubble_h: Float.
         The value of Hubble little h for the given cosmology. 
     """
+
     hubble_h = f_in["Header"]["Cosmology"].attrs["h_val"]
 
     return hubble_h
