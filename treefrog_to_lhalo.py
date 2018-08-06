@@ -207,7 +207,14 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
 
     forest_halos: `~np.ndarray` with data structure defined by
                   `get_LHalo_datastruct()`
-        The forest halos with updated `NextHaloInFOFgroup` field.        
+        The forest halos with updated `NextHaloInFOFgroup` field.
+
+    Returns
+    ----------
+
+    RuntimeError
+        We assume that all halos in a FoF group are stored contiguously in the
+        input trees.  If this is not the case, a RuntimeError is raised.
     """
 
     # Every FoF group will point to a single halo, so loop over the FoF groups.
@@ -220,9 +227,22 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
         halos_in_fof_global_inds = halos_in_fof + offset
 
         # The first halo will point to index 1 and so on. 
-        nexthalo = np.arange(offset+min(halos_in_fof)+1,
-                             offset+min(halos_in_fof)+len(halos_in_fof)+1) 
+        nexthalo = np.arange(min(halos_in_fof_global_inds)+1,
+                             min(halos_in_fof_global_inds)+len(halos_in_fof)+1)
+
+        # We make the assumption that halos within a FoF group are stored
+        # contiguously.  Ensure this is the case and that the indices of the
+        # halos within the FoF group are simply an arange.
+        if not np.allclose(halos_in_fof_global_inds, nexthalo): 
+            print("When attempting to fix the `NextHaloInFOFgroup` field we "
+                  "encountered substrucure that was not stored contiguously.")
+            print("For FoF ID {0}, the halos within this FoF group were "
+                  "{1}".format(fof, halos_in_fof_inds))
+            raise RuntimeError
+
+        # Check passed so we can update the halos.  
         forest_halos["NextHaloInFOFgroup"][halos_in_fof_global_inds] = nexthalo
+
         # The final halo terminates with -1.
         forest_halos["NextHaloInFOFgroup"][halos_in_fof_global_inds[-1]] = -1 
 
@@ -374,14 +394,14 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                     curr_halo = true_fof_idx
 
                     for flyby_ind in flyby_inds:
-                        #print("Flyby_ind {0}".format(flyby_ind))
                         while next_in_chain != -1:
-                            #print("next_in_chain {0}".format(next_in_chain))
                             curr_halo = next_in_chain
                             next_in_chain = forest_halos["NextHaloInFOFgroup"][next_in_chain]
                         forest_halos["NextHaloInFOFgroup"][curr_halo] = flyby_ind
                         next_in_chain = flyby_ind
 
+                    # After this there should only be one halo at the root
+                    # snapshot with `NextHaloInFOFgroup == -1`.
                     assert(len(np.where(forest_halos["NextHaloInFOFgroup"][0:NHalos_root] \
                                         == -1)[0]) == 1)
                 # Flybys and `NextHaloInFOFgroup` now fixed.
