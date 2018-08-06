@@ -231,7 +231,7 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
         # We make the assumption that halos within a FoF group are stored
         # contiguously.  Ensure this is the case and that the indices of the
         # halos within the FoF group are simply an arange.
-        if not np.allclose(halos_in_fof_global_inds, nexthalo):
+        if not np.allclose(halos_in_fof_global_inds, nexthalo-1):
             print("When attempting to fix the `NextHaloInFOFgroup` field we "
                   "encountered substrucure that was not stored contiguously.")
             print("For FoF ID {0}, the halos within this FoF group were "
@@ -248,7 +248,8 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
 
 
 def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
-                      forestID_field="ForestID", Nforests=None):
+                      forestID_field="ForestID", Nforests=None,
+                      write_binary_flag=1):
     """
     Takes the Treefrog trees that have had their IDs corrected to be in LHalo
     format and saves them in LHalo binary format.
@@ -285,6 +286,12 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         The number of forests to be processed. If `None` is passed then all
         forests are processed.
 
+    write_binary_flag: Integer. Default: 1.
+        Flag to decide whether to write to a binary or HDF5 file.  
+        0: HDF5 file only.
+        1: Binary file only.
+        2: Both binary and HDF5 file.
+
     Returns
     ----------
 
@@ -301,6 +308,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         print("ForestID Field Name: {0}".format(forestID_field))
         print("Number of Processors: {0}".format(size))
         print("Number of forests to process: {0}".format(Nforests))
+        print("Write Binary Flag: {0}".format(write_binary_flag))
         print("=================================")
         print("")
 
@@ -354,75 +362,105 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         # Write out the header with all this info.
         print("Rank {0} writing {1} forests containing a total of {2} "
               "halos.".format(rank, len(forests_to_process), totNHalos))
-        my_fname_out = "{0}.{1}".format(fname_out, rank)
+        if write_binary_flag == 1 or write_binary_flag == 2:
+            my_fname_out = "{0}.{1}".format(fname_out, rank)
+        else:
+            my_fname_out = "{0}.{1}.hdf5".format(fname_out, rank)
+
         write_header(my_fname_out, len(forests_to_process), totNHalos,
-                     global_halos_per_forest)
+                     global_halos_per_forest, write_binary_flag)
 
         start_time = time.time()
         hubble_h = get_hubble_h(f_in)
         # Now for each forest we want to populate the LHalos forest struct, fix
         # any IDs (e.g., flybys) and then write them out.
-        with open(my_fname_out, "ab") as f_out:
-            for count, forestID in enumerate(forests_to_process):
-                if count % 500 == 0:
-                    print("Rank {0} processed {1} Forests ({2:.2f} seconds "
-                          "elapsed).".format(rank, count,
-                                             time.time()-start_time))
-                NHalos = sum(NHalos_forest[forestID].values())
+        if write_binary_flag == 1 or write_binary_flag == 2:
+            f_out = open(my_fname_out, "ab")
+        else:
+            f_out = h5py.File(my_fname_out, "a") 
 
-                forest_halos = np.zeros(NHalos, dtype=LHalo_Desc)
-                forest_halos = populate_forest(f_in, forest_halos, Snap_Keys,
-                                               Snap_Nums, forestID,
-                                               NHalos_forest,
-                                               NHalos_forest_offset,
-                                               filenr, hubble_h)
+        for count, forestID in enumerate(forests_to_process):
+            if count % 500 == 0:
+                print("Rank {0} processed {1} Forests ({2:.2f} seconds "
+                      "elapsed).".format(rank, count,
+                                         time.time()-start_time))
+            NHalos = sum(NHalos_forest[forestID].values())
 
-                NHalos_root = NHalos_forest[forestID][last_snap_key]
-                forest_halos, true_fof_idx, flyby_inds = fix_flybys(forest_halos,
-                                                                    NHalos_root)
+            forest_halos = np.zeros(NHalos, dtype=LHalo_Desc)
+            forest_halos = populate_forest(f_in, forest_halos, Snap_Keys,
+                                           Snap_Nums, forestID,
+                                           NHalos_forest,
+                                           NHalos_forest_offset,
+                                           filenr, hubble_h)
 
-                # Now if there were any flybys, we need to update the
-                # `NextHaloInFOFgroup` chain to account for them.
-                if true_fof_idx:
-                    # We do this by starting at the main FoF group and moving until we reach
-                    # the end (`NextHaloInFOFgroup = -1`).  Then we attach the first flyby halo
-                    # onto the end.  We then move down THAT flyby's chain and repeat the
-                    # process.
-                    next_in_chain = forest_halos["NextHaloInFOFgroup"][true_fof_idx]
-                    curr_halo = true_fof_idx
+            NHalos_root = NHalos_forest[forestID][last_snap_key]
+            forest_halos, true_fof_idx, flyby_inds = fix_flybys(forest_halos,
+                                                                NHalos_root)
 
-                    for flyby_ind in flyby_inds:
-                        while next_in_chain != -1:
-                            curr_halo = next_in_chain
-                            next_in_chain = forest_halos["NextHaloInFOFgroup"][next_in_chain]
-                        forest_halos["NextHaloInFOFgroup"][curr_halo] = flyby_ind
-                        next_in_chain = flyby_ind
+            # Now if there were any flybys, we need to update the
+            # `NextHaloInFOFgroup` chain to account for them.
+            if true_fof_idx:
+                # We do this by starting at the main FoF group and moving until we reach
+                # the end (`NextHaloInFOFgroup = -1`).  Then we attach the first flyby halo
+                # onto the end.  We then move down THAT flyby's chain and repeat the
+                # process.
+                next_in_chain = forest_halos["NextHaloInFOFgroup"][true_fof_idx]
+                curr_halo = true_fof_idx
 
-                    # After this there should only be one halo at the root
-                    # snapshot with `NextHaloInFOFgroup == -1`.
-                    assert(len(np.where(forest_halos["NextHaloInFOFgroup"][0:NHalos_root] \
-                                        == -1)[0]) == 1)
-                # Flybys and `NextHaloInFOFgroup` now fixed.
+                for flyby_ind in flyby_inds:
+                    while next_in_chain != -1:
+                        curr_halo = next_in_chain
+                        next_in_chain = forest_halos["NextHaloInFOFgroup"][next_in_chain]
+                    forest_halos["NextHaloInFOFgroup"][curr_halo] = flyby_ind
+                    next_in_chain = flyby_ind
 
-                forest_halos = fix_nextprog(forest_halos)
+                # After this there should only be one halo at the root
+                # snapshot with `NextHaloInFOFgroup == -1`.
+                assert(len(np.where(forest_halos["NextHaloInFOFgroup"][0:NHalos_root] \
+                                    == -1)[0]) == 1)
+            # Flybys and `NextHaloInFOFgroup` now fixed.
 
-                # The VELOCIraptor + Treefrog trees point to themselves when
-                # they terminate.  However LHalo Trees requires these to be -1,
-                # so find the instances where `NextProgenitor` and
-                # `FirstProgenitor` point to themselves and adjust them to -1.
-                w = np.arange(NHalos)
-                NextProg_tofix = [x for x in w if x == forest_halos["NextProgenitor"][x]]
-                FirstProg_tofix = [x for x in w if x == forest_halos["FirstProgenitor"][x]]
+            forest_halos = fix_nextprog(forest_halos)
 
-                forest_halos["NextProgenitor"][NextProg_tofix] = -1
-                forest_halos["FirstProgenitor"][FirstProg_tofix] = -1
+            # The VELOCIraptor + Treefrog trees point to themselves when
+            # they terminate.  However LHalo Trees requires these to be -1,
+            # so find the instances where `NextProgenitor` and
+            # `FirstProgenitor` point to themselves and adjust them to -1.
+            w = np.arange(NHalos)
+            NextProg_tofix = [x for x in w if x == forest_halos["NextProgenitor"][x]]
+            FirstProg_tofix = [x for x in w if x == forest_halos["FirstProgenitor"][x]]
 
-                # All done! Append to the file.
+            forest_halos["NextProgenitor"][NextProg_tofix] = -1
+            forest_halos["FirstProgenitor"][FirstProg_tofix] = -1
+
+            # All done! Append to the file.
+
+            if write_binary_flag == 1 or write_binary_flag == 2:
                 forest_halos.tofile(f_out)
+            else:
+                group_name = "tree_{0:03d}".format(forestID)
+                hdf5_file.create_group(group_name)
+
+                for subgroup_name in LHalo_Desc.names:
+                    hdf5_file[group_name][subgroup_name] = forest_halos[subgroup_name]
+
+        # End of Forests Loop.
+
+        f_out.close()
+
+    # Input HDF5 file closed.
 
     print("Rank {0} has finished writing out {1} Forests to "
           "{2}".format(rank, len(forests_to_process), my_fname_out))
     print("Total time elapsed: {0:.2f} Seconds.".format(time.time()-start_time))
+
+    # If the user set `write_binary_flag == 2`, then convert the binary file to
+    # a HDF5 one.
+
+    if write_binary_flag == 2: 
+        hdf5_fname_out = "{0}.{1}.hdf5".format(fname_out, rank)
+        convert_binary_to_hdf5(my_fname_out, hdf5_fname_out)
+        print("Binary file also converted to HDF5.")
 
 
 def determine_forests(NHalos_forest, all_forests):
@@ -497,7 +535,8 @@ def determine_forests(NHalos_forest, all_forests):
     return my_forest_assignment
 
 
-def write_header(fname_out, Nforests, totNHalos, halos_per_forest):
+def write_header(fname_out, Nforests, totNHalos, halos_per_forest,
+                 write_binary_flag):
     """
     Creates the LHalo Tree binary file and writes the header information. This
     is of the form:
@@ -521,18 +560,34 @@ def write_header(fname_out, Nforests, totNHalos, halos_per_forest):
     halos_per_forest: List of integers.
         The number of halos within each forest that will be saved in this file.
 
+    write_binary_flag: Integer.
+        Flag to decide whether to write to a binary or HDF5 file.  
+        0: HDF5 file only.
+        1: Binary file only.
+        2: Both binary and HDF5 file.
+
     Returns
     ----------
 
     None.
     """
 
-    print("Writing the LHalo binary header.")
+    if write_binary_flag == 1 or write_binary_flag == 2:
 
-    with open(fname_out, "wb") as f_out:
-        f_out.write(np.array(Nforests, dtype=np.int32).tobytes())
-        f_out.write(np.array(totNHalos, dtype=np.int32).tobytes())
-        f_out.write(np.array(halos_per_forest, dtype=np.int32).tobytes())
+        with open(fname_out, "wb") as f_out:
+            f_out.write(np.array(Nforests, dtype=np.int32).tobytes())
+            f_out.write(np.array(totNHalos, dtype=np.int32).tobytes())
+            f_out.write(np.array(halos_per_forest, dtype=np.int32).tobytes())
+
+    else:
+
+        with h5py.File(fname_out, "w") as f_out:
+            f_out.create_group("Header")
+            f_out["Header"].attrs.create("Ntrees", Nforest, dtype=np.int32)
+            f_out["Header"].attrs.create("totNHalos", totNHalos, 
+                                             dtype=np.int32)
+            f_out["Header"].attrs.create("TreeNHalos", halos_per_forest, 
+                                             dtype=np.int32)
 
     return
 

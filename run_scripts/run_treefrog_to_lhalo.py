@@ -14,10 +14,12 @@ from genesis.utils import treefrog_to_lhalo as frog_to_l
 if __name__ == '__main__':
 
     fname_in = "/fred/oz004/jseiler/genesis/treefrog_trees/new_genesis_version_lhalo_indices.hdf5"
-    fname_out = "/fred/oz004/jseiler/genesis/treefrog_trees/new_genesis_version_lhalo_binary_units"
+    fname_out = "/fred/oz004/jseiler/genesis/treefrog_trees/test"
     haloID_field = "ID"
     forestID_field = "ForestID"
-    Nforests = 10000
+    Nforests = 10
+    write_binary_flag = 2
 
     frog_to_l.treefrog_to_lhalo(fname_in, fname_out,
-                                haloID_field, forestID_field, Nforests)
+                                haloID_field, forestID_field, Nforests,
+                                write_binary_flag)
