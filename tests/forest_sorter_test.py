@@ -6,173 +6,110 @@ import sys
 import h5py
 import os
 import pytest
+from tqdm import tqdm
 
 from genesis.utils import forest_sorter as fs
 from genesis.utils import common as cmn
 
 
-def parse_inputs():
-    """
-    Parses the command line input arguments.
-
-    If there has not been an input or output file specified a RuntimeError will
-    be raised.
-
-    Parameters
-    ----------
-
-    None.
-
-    Returns
-    ----------
-
-    args: Dictionary.  Required.
-        Dictionary of arguments from the ``argparse`` package.
-        Dictionary is keyed by the argument name (e.g., args['fname_in']).
-    """
-
-    parser = argparse.ArgumentParser()
-    test_dir = os.path.dirname(__file__)
-
-    parser.add_argument("-f", "--fname_in", dest="fname_in",
-                        help="Path to test HDF5 data. Default: "
-                        "{0}/test_data.hdf5".format(test_dir),
-                        default="{0}/test_data.hdf5".format(test_dir))
-    parser.add_argument("-o", "--fname_out", dest="fname_out",
-                        help="Path to sorted output HDF5 data file. "
-                        "Default: {0}/test_sorted.hdf5".format(test_dir),
-                        default="{0}/test_sorted.hdf5".format(test_dir))
-    parser.add_argument("-s", "--sort_fields", dest="sort_fields",
-                        help="Field names we will be sorted on. ORDER IS "
-                        "IMPORTANT.  Order using the outer-most sort to the "
-                        "inner-most.  Separate each field name with a comma. "
-                        "Default: ForestID,Mass_200mean.",
-                        default="ForestID,Mass_200mean")
-    parser.add_argument("-i", "--HaloID", dest="halo_id",
-                        help="Field name for halo ID. Default: ID.",
-                        default="ID")
-    parser.add_argument("-p", "--ID_fields", dest="ID_fields",
-                        help="Field names for those that contain IDs.  Separate "
-                        "field names with a comma. "
-                        "Default: ID,Tail,Head,NextSubHalo,Dummy1,Dumm2).",
-                        default=("ID,Tail,Head,NextSubHalo,Dummy,Dummy"))
-    parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
-                        help="Conversion factor to go from a unique, "
-                        "per-snapshot halo index to a temporally unique haloID. "
-                        "Default: 1e12.", default=1e12)
-    parser.add_argument("-n", "--NHalos_test", dest="NHalos_test",
-                        help="Minimum number of halos to test. Default: "
-                        "10,000", default=10000, type=int)
-
-    args = parser.parse_args()
-
-    # We allow the user to enter an arbitrary number of sort fields and fields
-    # that contain IDs.  They are etnered as a single string separated by
-    # commas so need to split them up into a list.
-    args.ID_fields = (args.ID_fields).split(',')
-    args.sort_fields = args.sort_fields.split(',')
-
-    # Print some useful startup info. #
-    print("")
-    print("Running test functions")
-    print("Performing tests on a minimum of {0} halos."
-          .format(args.NHalos_test))
-    print("The HaloID field for each halo is '{0}'.".format(args.halo_id))
-    print("Sorting on the {0} fields".format(args.sort_fields))
-    print("")
-
-    return vars(args)
+test_dir = os.path.dirname(os.path.realpath(__file__))
+default_fname_in = "{0}/test_data.hdf5".format(test_dir)
+default_user_fname_in = "{0}/my_test_data.hdf5".format(test_dir)
+default_fname_out = "{0}/test_sorted.hdf5".format(test_dir)
 
 
-def recursively_check_sort(snapshot_data, args, sort_level, halo_idx):
-    """
-    Moves through the sort level, checking that each key was sorted.
-
-    Parameters
-    ----------
-
-    snapshot_data: HDF5 File. Required.
-        Snapshot data that we are checking.  The fields of this are the halo
-        properties for the snapshot.
-
-    args: Dictionary. Required.
-        Dictionary containing the argsion parameters specified at runtime.
-        Used to get the sorting fields.
-
-    sort_level: Integer. Required.
-        The sort level that we are currently on.  Used to get the sort key.
-
-    halo_idx: Integer. Required.
-        Index of the halo we are comparing.
-
-    Returns
-    ----------
-
-    None. ``Pytest.fail()`` is invoked if the test fails.
-    """
-
-    # Our checking goes from outer-most to inner-most.  If the user didn't want
-    # to sort on 4 fields and used None, then we stop recursively calling.
-    key = args["sort_fields"][sort_level]
-    if key is None or "NONE" in key.upper():
-        return
-
-    this_value = snapshot_data[key][halo_idx]
-    this_id = snapshot_data[key][halo_idx]
-
-    next_value = snapshot_data[key][halo_idx + 1]
-    next_id = snapshot_data[key][halo_idx]
-
-    # If the values are equal, we need to move to the next sort level.  However
-    # if we're currently at the inner-most level then the sorting is still done
-    # correctly (equal values next to each other).
-    if this_value == next_value \
-       and sort_level < (len(args["sort_fields"]) - 1):
-        recursively_check_sort(snapshot_data, args, sort_level + 1,
-                               halo_idx)
-
-    # Otherwise if we haven't sorted correctly in ascended order, print a
-    # message and fail the test.
-    elif this_value > next_value:
-        print("For Halo ID {0} we had a {1} value of {2}.  After sorting "
-              "via lexsort using the fields {3} (inner-most sort first), "
-              "the next in the sorted list has ID {4} and a {1} value of {5}"
-              .format(this_id, key, this_id, args["sort_fields"],
-                      next_id, key, next_id))
-
-        cleanup(args)
-        pytest.fail()
-
-    return
-
-
-def my_test_sorted_order(args):
+def my_test_sorted_order(fname_out=default_fname_out, haloID_field="ID", 
+                         sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
+                         sort_direction=np.array([1,1,-1]), gen_data=0): 
     """
     Checks the indices of the output file to ensure sorting order is correct.
 
-    Calls ``recursively_check_sort`` for each halo which iterates through the
+    Calls `recursively_check_sort` for each halo which iterates through the
     sorted fields to ensure all the sorted is correct.
 
     Parameters
     ----------
 
-    args: Dictionary. Required.
-        Dictionary containing the argsion parameters specified at runtime.
-        Used to get file name and sorting fields.
+    fname_out: String. Default: `<test_directory>/test_sorted.hdf5`. 
+        Path to the sorted HDF5 trees we're testing. 
+        saved.
+
+        ..note::
+            If `gen_data=1` the sorted trees will be removed upon exit. 
+
+    haloID_field: String. Default: 'ID'.
+        Field name within the HDF5 file that corresponds to the unique halo ID.
+
+    sort_fields: List of strings. Default: ['ForestID', 'hostHaloID',
+                                            'Mass_200mean'].
+        The HDF5 field names that the sorting was performed on. The entries
+        are ordered such that the first field will be the outer-most sort and
+        the last field will be the inner-most sort.
+
+    gen_data: Integer. Default: 0.
+        Flag whether this function was called using sorted trees generated for
+        testing purposes.  If this flag is set to 1 then the sorted trees will
+        be removed if the test fails. 
 
     Returns
     ----------
 
-    None. ``Pytest.fail()`` is invoked by ``recursively_check_sort`` if the
-    test fails.
+    None. 
+
+    `~pytest.fail()` is invoked by `recursively_check_sort()` if the test fails.
     """
 
-    with h5py.File(args["fname_out"], "r") as f_in:
+    def recursively_check_sort(snapshot_data, sort_fields, sort_direction, 
+                               sort_level, halo_idx, gen_data):
+        """
+        Moves through the sort level, checking that each key was sorted.
+        """
+
+        # Our checking goes from outer-most to inner-most.  If the user didn't want
+        # to sort on 4 fields and used None, then we stop recursively calling.
+        key = sort_fields[sort_level]
+        if key is None or "NONE" in key.upper():
+            return
+
+        values = snapshot_data[key][:]
+
+        this_value = values[halo_idx]
+        this_id = values[halo_idx]
+
+        next_value = values[halo_idx + 1]
+        next_id = values[halo_idx + 1]
+
+        # If the values are equal, we need to move to the next sort level.  However
+        # if we're currently at the inner-most level then the sorting is still done
+        # correctly (equal values next to each other).
+        if this_value == next_value \
+           and sort_level < (len(sort_fields) - 1):
+            recursively_check_sort(snapshot_data, sort_fields, sort_direction,
+                                   sort_level + 1, halo_idx, gen_data)
+
+        # Otherwise if we haven't sorted correctly in ascended order, print a
+        # message and fail the test.
+        elif (this_value > next_value and sort_direction[sort_level] == 1) or \
+             (this_value < next_value and sort_direction[sort_level] == -1):
+            print("For Halo ID {0} we had a {1} value of {2}.  After sorting "
+                  "via lexsort using the fields {3} (inner-most sort first), "
+                  "the next in the sorted list has ID {4} and a {1} value of {5}"
+                  .format(this_id, key, this_id, sort_fields,
+                          next_id, next_id))
+
+            if gen_data:
+                cleanup()
+            pytest.fail()
+
+        return None
+
+    with h5py.File(fname_out, "r") as f_in:
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
-        for snap_key in Snap_Keys:
-            NHalos = len(f_in[snap_key][args["halo_id"]])
+        print("Looping over each snapshot.")
+        for snap_key in tqdm(Snap_Keys):
+            NHalos = len(f_in[snap_key][haloID_field])
             if NHalos < 2:  # Skip snapshots that wouldn't be sorted.
                 continue
 
@@ -185,10 +122,13 @@ def my_test_sorted_order(args):
             # halo[i + 1] we need to check an inner-key to ensure it's sorted.
 
             for idx in range(NHalos - 1):
-                recursively_check_sort(f_in[snap_key], args, 0, idx)
+                recursively_check_sort(f_in[snap_key], sort_fields,
+                                       sort_direction, 0, idx, gen_data)
 
 
-def my_test_check_haloIDs(args):
+def my_test_check_haloIDs(fname_in=default_fname_in,
+                          fname_out=default_fname_out, haloID_field="ID", 
+                          index_mult_factor=1e12, gen_data=0):
     """
     Checks the sorted haloIDs and snapshot numbers match the formula.
 
@@ -198,30 +138,48 @@ def my_test_check_haloIDs(args):
     Parameters
     ----------
 
-    args: Dictionary.
-        Dictionary containing the argsion parameters specified at runtime.
-        Used to get file name and sorting fields.
+    fname_in, fname_out: String. Default: `<test_directory>/test_data.hdf5`,
+    `<test_directory>/test_sorted.hdf5`.     
+        Path to the input HDF5 trees and path to where the sorted trees were
+        saved. 
+
+    haloID_field: String. Default: 'ID'.
+        Field name within the HDF5 file that corresponds to the unique halo ID.
+
+    index_mult_factor: Integer. Default: 1e12.
+        Multiplication factor to generate a temporally unique halo ID. See
+        `common.index_to_temporalID`.
+
+    gen_data: Integer. Default: 0.
+        Flag whether this function was called using sorted trees generated for
+        testing purposes.  If this flag is set to 1 then the sorted trees will
+        be removed if the test fails. 
 
     Returns
     ----------
 
-    None. ``Pytest.fail()`` is invoked if the test fails.
+    None. 
+
+    `~pytest.fail()` is invoked if the test fails. 
     """
 
-    files = [args["fname_in"], args["fname_out"]]
+    files = [fname_in, fname_out]
 
     for file_to_test in files:
+        print("Checking that the HaloIDs are correct for file "
+              "{0}".format(file_to_test))
         with h5py.File(file_to_test, "r") as f_in:
             Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
-            for snap_key in Snap_Keys:
-                if len(f_in[snap_key][args["halo_id"]]) == 0:
+            print("Looping over each Snapshot.")
+            for snap_key in tqdm(Snap_Keys):
+                if len(f_in[snap_key][haloID_field]) == 0:
                     continue
 
-                file_haloIDs = f_in[snap_key][args["halo_id"]][:]
+                file_haloIDs = f_in[snap_key][haloID_field][:]
                 generated_haloIDs = cmn.index_to_temporalID(np.arange(len(file_haloIDs)),
                                                             Snap_Nums[snap_key],
-                                                            args["index_mult_factor"])
+                                                            index_mult_factor)
 
         if not np.array_equal(generated_haloIDs, file_haloIDs):
             print("The HaloIDs within file '{0}' were not correct."
@@ -232,11 +190,17 @@ def my_test_check_haloIDs(args):
                   "may be wrong!  If this is the test sorted output file, "
                   "contact jseiler@swin.edu.au")
 
-            cleanup(args)
+            if gen_data:
+                cleanup(fname_in)
             pytest.fail()
 
 
-def my_test_sorted_properties(args):
+def my_test_sorted_properties(fname_in=default_fname_in,
+                              fname_out=default_fname_out, ID_fields="ID", 
+                              sort_fields=["ForestID", "hostHaloID",
+                                           "Mass_200mean"],  
+                              sort_direction=np.array([1,1,-1]), gen_data=0):
+                              
     """
     Ensures that the halo properties were sorted and saved properly.
 
@@ -248,9 +212,24 @@ def my_test_sorted_properties(args):
     Parameters
     ----------
 
-    args: Dictionary.
-        Dictionary containing the argsion parameters specified at runtime.
-        Used to get file name and sorting fields.
+    fname_in, fname_out: String. Default: `<test_directory>/test_data.hdf5`,
+    `<test_directory>/test_sorted.hdf5`.     
+        Path to the input HDF5 trees and path to where the sorted trees were
+        saved. 
+
+    haloID_field: String. Default: 'ID'.
+        Field name within the HDF5 file that corresponds to the unique halo ID.
+
+    sort_fields: List of strings. Default: ['ForestID', 'hostHaloID',
+                                            'Mass_200mean'].
+        The HDF5 field names that the sorting was performed on. The entries
+        are ordered such that the first field will be the outer-most sort and
+        the last field will be the inner-most sort.
+
+    gen_data: Integer. Default: 0.
+        Flag whether this function was called using sorted trees generated for
+        testing purposes.  If this flag is set to 1 then the sorted trees will
+        be removed if the test fails. 
 
     Returns
     ----------
@@ -258,19 +237,23 @@ def my_test_sorted_properties(args):
     None. ``Pytest.fail()`` is invoked if the test fails.
     """
 
-    with h5py.File(args["fname_in"], "r") as f_in, \
-         h5py.File(args["fname_out"], "r") as f_out:
+    with h5py.File(fname_in, "r") as f_in, \
+         h5py.File(fname_out, "r") as f_out:
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_out.keys())
 
-        for snap_key in Snap_Keys:  # Now let's check each field.
+        print("Looping over each Snapshot")
+        for snap_key in tqdm(Snap_Keys):  # Now let's check each field.
             for field in f_out[snap_key]:
+                if field in ID_fields:  # Ignore ID fields.
+                    continue
 
-                if field in args["ID_fields"]:  # Ignore ID fields.
+                if field == "oldIDs":  # Original input doesn't have oldIDs.
                     continue
 
                 indices = fs.get_sort_indices(f_in,
-                                              snap_key, args)
+                                              snap_key, sort_fields,
+                                              sort_direction)
 
                 input_data = f_in[snap_key][field][:]
                 input_data_sorted = input_data[indices]
@@ -288,11 +271,13 @@ def my_test_sorted_properties(args):
                           .format(input_data, indices, input_data_sorted,
                                   output_data))
 
-                    cleanup(args)
+                    if gen_data:
+                        cleanup(fname_in)
                     pytest.fail()
 
 
-def create_test_input_data(args):
+def create_test_input_data(fname_in=default_fname_in, haloID_field="ID", 
+                           NHalos_test=10000):
     """
     Creates a test data set from the user supplied input data.
 
@@ -309,79 +294,131 @@ def create_test_input_data(args):
     Parameters
     ----------
 
-    args: Dictionary.
-        Dictionary containing the argsion parameters specified at runtime.
-        Used to get file name and number of halos to copy.
+    fname_in: String. Default: `<test_directory>/test_data.hdf5`.
+        Path to the HDF5 trees we're creating the data set from.
+
+    haloID_field: String. Default: 'ID'.
+        Field name within the HDF5 file that corresponds to the unique halo ID.
+
+    NHalos_test: Integer. Default: 10000.
+        The number of halos that will be copied into the test data set.
 
     Returns
     ----------
 
-    fname_out: String.
+    default_user_fname_in: String.
         The path to the small copied data file.
     """
 
-    fname_out = "{0}/my_test_data.hdf5"
-
-    with h5py.File(args["fname_in"], "r") as f_in, \
-         h5py.File(fname_out, "w") as f_out:
+    with h5py.File(fname_in, "r") as f_in, \
+         h5py.File(default_user_fname_in, "w") as f_out:
         NHalos = 0
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
         for snap_key in Snap_Keys:
-            if len(f_in[snap_key][args["halo_id"]]) == 0:
+            if len(f_in[snap_key][haloID_field]) == 0:
                 continue
 
-            cmn.copy_group(f_in, f_out, snap_key, args)
-            NHalos += len(f_in[snap_key][args["halo_id"]])
+            cmn.copy_group(f_in, f_out, snap_key)
+            NHalos += len(f_in[snap_key][haloID_field])
 
-            if NHalos >= args["NHalos_test"]:
+            if NHalos >= NHalos_test:
                 break
 
-    if NHalos < args["NHalos_test"]:
+    if NHalos < NHalos_test:
         print("Your supplied data file did not contain enough halos to test.")
         print("Your file contained {0} halos whereas you specified to run "
-              "on {1} halos.".format(NHalos, args["NHalos_test"]))
+              "on {1} halos.".format(NHalos, NHalos_test))
         print("Either lower the number of halos to test on (--Nhalos_test) or "
               "use other data.")
         raise RuntimeError
 
-    return fname_out
+    return default_user_fname_in 
 
 
-def cleanup(args):
+def cleanup(fname_in):
     """
-    Remove the output sorted test data.
+    If the user generated a small chunk of data to test on, delete it and the
+    resulting sorted trees. 
 
-    If the user specified their own data to test, remove the small chunk we
-    copied.
+    ..note::
+        This function is only called if `gen_data=1` is passed to the test
+        functions.
 
     Parameters
     ----------
 
-    args: Dictionary.
-        Dictionary containing the argsion parameters specified at runtime.
-        Used to get file names.
+    None.
 
     Returns
     ----------
 
-    None
+    None.
     """
 
-    if "-f" in sys.argv:  # Don't delete the default input data.
-        os.remove(args["fname_in"])
-    os.remove(args["fname_out"])
+    # Check to see if a small test data set was created.    
+    if os.path.isfile(default_user_fname_in):
+        os.remove(fname_in)
+
+    # Remove the sorted trees. 
+    os.remove(default_fname_out)
 
 
-def test_run():
+def test_run(fname_in=default_fname_in, fname_out=default_fname_out, 
+             haloID_field="ID", sort_fields=["ForestID", "hostHaloID", 
+                                             "Mass_200mean"],
+             sort_direction=np.array([1,1,-1]), ID_fields=["Head", "Tail", 
+                                                           "RootHead", "RootTail", 
+                                                           "ID", "hostHaloID"],
+             index_mult_factor=1e12, NHalos_test=10000, gen_data=1):             
     """
     Wrapper to run all the tests.
 
+    Default parameters are set for ASTRO3D Genesis trees. 
+
     Parameters
     ----------
 
-    None.
+    fname_in, fname_out: String. Default: `<test_directory>/test_data.hdf5`,
+    `<test_directory>/test_sorted.hdf5`.
+        If `gen_data=0`, these are the paths to the original unsorted HDF5
+        trees and the sorted HDF5 data file we are testing.
+
+        If `gen_data=1`, this is the path to the original unsorted HDF5
+        trees and the path to where the test sorted data set should be saved.
+
+        ..note::
+            If `gen_data=1` the sorted trees will be removed upon exit. 
+
+    haloID_field: String. Default: 'ID'.
+        Field name within the HDF5 file that corresponds to the unique halo ID.
+
+    sort_fields: List of strings. Default: ['ForestID', 'hostHaloID',
+                                            'Mass_200mean'].
+        The HDF5 field names that the sorting will be performed on. The entries
+        are ordered such that the first field will be the outer-most sort and
+        the last field will be the inner-most sort.
+
+    ID_fields: List of string. Default: ['Head', 'Tail', 'RootHead', 'RootTail',
+                                        'ID', 'hostHaloID'].
+        The HDF5 field names that correspond to properties that use halo IDs.
+        As the halo IDs are updated to reflect the new sort order, these fields
+        must also be updated. 
+
+    index_mult_factor: Integer. Default: 1e12.
+        Multiplication factor to generate a temporally unique halo ID. See
+        `common.index_to_temporalID`.
+
+    NHalos_test: Integer. Default: 10000.
+        If `gen_data=1`, we only test on a subset of the input HDF5 trees.
+        This parameter controls how many halos we use from the input HDF5 trees
+        to test on.
+
+    gen_data: Integer. Default: 1.
+        Flag whether we want to generate data to test on. If this  is set to 
+        0, the tests will be run on the `fname_out` sorted data that was 
+        created running on the `fname_in` HDF5 trees. 
 
     Returns
     ----------
@@ -389,39 +426,86 @@ def test_run():
     None.
     """
 
-    args = parse_inputs()
+    if gen_data: 
+        if fname_in != default_fname_in:  # User specified their own input data.
+            print("You have supplied your own test input data.")
+            print("Saving a small file with the first {0} Halos."
+                  .format(NHalos_test))
+            fname_in = create_test_input_data(fname_in, haloID_field,
+                                              NHalos_test)
 
-    if "-f" in sys.argv:  # User specified their own input data.
-        print("You have supplied your own test input data.")
-        print("Saving a small file with the first {0} Halos."
-              .format(args["NHalos_test"]))
-        args["fname_in"] = create_test_input_data(args)
+        print("Creating the sorted trees from {0}".format(fname_in))
+        # Since we are generating a sorted file from only a partial number of halos
+        # the merger pointers could point to a snapshot that is not included.
+        # Hence we need to skip all the merger pointer fields.
+        tmp_ID_fields = ID_fields
+        ID_fields = haloID_field
 
-    # Since we are generating a sorted file from only a partial number of halos
-    # the merger pointers could point to a snapshot that is not included.
-    # Hence we need to skip all the merger pointer fields.
+        fs.forest_sorter(fname_in, fname_out, haloID_field,
+                         sort_fields, sort_direction, ID_fields, 
+                         index_mult_factor)
+                         
+        ID_fields = tmp_ID_fields  # Then put back the old argsion.
 
-    tmp_ID_fields = args["ID_fields"]
-    args["ID_fields"] = args["halo_id"]
-    fs.sort_and_write_file(args)
+    print("=================================")
+    print("Running tests")
+    print("Input Unsorted Trees: {0}".format(fname_in))
+    print("Output Sorted Trees: {0}".format(fname_out))
+    print("Sort Fields: {0}".format(sort_fields))
+    print("Sort Direction: {0}".format(sort_direction))
+    print("=================================")
+    print("")
 
-    args["ID_fields"] = tmp_ID_fields  # Then put back the old argsion.
-
-    print("Checking that the produced temporal IDs are correct.")
-    my_test_check_haloIDs(args)
-
-    print("Checking that the sort order is correct for the sort keys.")
-    my_test_sorted_order(args)
-
-    print("Checking that the sort order is correct for the halo properties.")
-    my_test_sorted_properties(args)
 
     print("")
-    print("All tests have passed.")
+    print("Checking that the produced temporal IDs are correct.")
+    my_test_check_haloIDs(fname_in, fname_out, haloID_field, 
+                          index_mult_factor, gen_data)
+    print("")
 
-    cleanup(args)
+
+    print("")
+    print("Checking that the sort order is correct for the sort keys.")
+    my_test_sorted_order(fname_out, haloID_field, 
+                         sort_fields, sort_direction, gen_data)
+    print("")
 
 
-if __name__ == "__main__":
+    print("")
+    print("Checking that the sort order is correct for the halo properties.")
+    my_test_sorted_properties(fname_in, fname_out,
+                              haloID_field, sort_fields, sort_direction,
+                              gen_data)
+    print("")
 
-    test_run()
+    print("")
+    print("=================================")
+    print("All tests passed!")
+    print("=================================")
+    print("")
+
+    if gen_data:
+        cleanup(fname_in)
+
+
+if __name__ == '__main__':
+    """
+    Example script for running tests on your own data. 
+
+    See `test_run()` documentation for explanation of each variable.
+    """
+
+    fname_in=default_fname_in
+    fname_out=default_fname_out 
+    haloID_field="ID"
+    sort_fields=["ForestID", "hostHaloID", "Mass_200mean"]
+    sort_direction=np.array([1,1,-1])
+    sort_direction=np.array([1,1,-1])
+    ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID", "hostHaloID"]
+    index_mult_factor=1e12
+    NHalos_test=10000
+    gen_data=1
+
+    test_run(fname_in, fname_out, haloID_field,
+             sort_fields, sort_direction, ID_fields, index_mult_factor,
+             NHalos_test, gen_data)

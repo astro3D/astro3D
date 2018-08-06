@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-
 def snap_key_to_snapnum(snap_key):
     """
     Given the name of a snapshot key, finds the associated snapshot number.
@@ -136,7 +135,7 @@ def get_snapkeys_and_nums(file_keys):
     Snap_Keys: List of strings.
         Names of the snapshot keys within the passed keys.
 
-    Snap_Num: Dictionary of integers keyed by Snap_Keys.
+    Snap_Nums: Dictionary of integers keyed by `Snap_Keys`.
         Snapshot number of each snapshot key.
 
     Examples
@@ -202,7 +201,7 @@ def temporalID_to_snapnum(temporalID, index_mult_factor):
     return snapnum
 
 
-def copy_group(file_in, file_out, key, opt):
+def copy_group(file_in, file_out, key):
     """
     Copies HDF5 group into a new HDF5 file (with same data-structure).
 
@@ -216,10 +215,6 @@ def copy_group(file_in, file_out, key, opt):
     key: String.  Required.
         Name of the HDF5 group being copied.
 
-    opt: Dictionary.  Required.
-        Dictionary containing the option parameters specified at runtime.
-        Used to specify the field names we are sorting on.
-
     Returns
     ----------
 
@@ -230,6 +225,107 @@ def copy_group(file_in, file_out, key, opt):
     group_id = file_out.require_group(group_path)  # Create the group.
     name = "{0}".format(key)  # Name the group.
     file_in.copy(name, group_id, name=key)  # Copy over the data.
+
+
+def get_halos_per_forest(f_in, Snap_Keys, haloID_field="ID",
+                         forestID_field="ForestID"):
+    """
+    Determines the number of halos in each forest.
+
+    The resulting Dictionary is nested with the outer-key given by the ForestID
+    and the inner-key given by the snapshot field name.
+
+    E.g., If forest 5 has 10 halos at Snapshot 20 and 100 at Snapshot 21 then,
+        NHalos_forest[5]['Snap_020'] = 10
+        NHalos_forest[5]['Snap_021'] = 100
+
+    We also generate the offset for each Forest at each snapshot.  This is
+    necessary because whilst Forest 5 may saved first at snapshot 20, it isn't
+    necessarily saved first at snapshot 21.
+
+    ..note::
+        The default parameters are chosen to match the ASTRO3D Genesis trees as
+        produced by VELOCIraptor + Treefrog.    
+
+    Parameters
+    ----------
+
+    f_in: Open HDF5 file. Required.
+        HDF5 file that contains the sorted trees.
+
+    Snap_Keys: List of strings. Required.
+        List of keys that correspond to the fields containing the snapshot
+        data.
+
+    haloID_field: String. Default: 'ID'.
+        Field name within the HDF5 file that corresponds to the unique halo ID.
+
+    forestID_field: String. Default: 'ForestID'.
+        Field name within the HDF5 file that corresponds to forest ID.
+ 
+    Returns
+    ----------
+
+    NHalos_forest: Nested Dictionary. Required.
+        Nested dictionary that contains the number of halos for each Forest at
+        each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
+        key.
+
+    NHalos_forest_offset: Nested Dictionary. Required.
+        Nested dictionary that contains the offset for each Forest at each
+        snapshot. Outer-key is the ForestID and inner-key is the snapshot key.
+        This is required because whilst the tree is sorted by ForestID, the
+        relative position of the tree can change from snapshot to snapshot.
+    """
+
+    import numpy as np
+    import time
+    import os 
+    from tqdm import tqdm
+
+    start_time = time.time()
+
+    print("")
+    print("Generating the dictionary for the number of halos in each forest "
+          "at each snapshot.")
+
+    NHalos_forest = {}
+    NHalos_forest_offset = {}
+
+    for count, snap_key in enumerate(tqdm(Snap_Keys)):
+        if len(f_in[snap_key][haloID_field]) == 0:  # Skip empty snapshots.
+            continue
+
+        halos_counted = 0
+        halo_forestids = f_in[snap_key][forestID_field][:]
+
+        # First get the number of halos in each forest then grab the indices
+        # (i.e., the forestID as we start from 0) of the forests that have
+        # halos.
+        forests_binned = np.bincount(halo_forestids)
+        forestIDs = np.nonzero(forests_binned)[0]
+
+        for forest_id in forestIDs:
+            this_snap_NHalos = forests_binned[forest_id]
+
+            # The first time a forest appears it won't have a corresponding key
+            # in the nested dictionary so create it if it's the case.
+            try:
+                NHalos_forest[forest_id][snap_key] = this_snap_NHalos
+                NHalos_forest_offset[forest_id][snap_key] = halos_counted
+            except KeyError:
+                NHalos_forest[forest_id] = {snap_key: this_snap_NHalos}
+                NHalos_forest_offset[forest_id] = {snap_key: halos_counted}
+
+            halos_counted += this_snap_NHalos
+
+    end_time = time.time()
+    print("Creation of number of halos per forest took {0:3f} seconds."
+          .format(end_time - start_time))
+    print("")
+
+    return NHalos_forest, NHalos_forest_offset
+
 
 if __name__ == "__main__":
     import doctest

@@ -1,94 +1,27 @@
+"""
+Authors: Jacob Seiler, Manodeep Sinha
+"""
+
 #!/usr/bin:env python
 from __future__ import print_function
 import numpy as np
 import h5py
 from tqdm import tqdm
-import argparse
 import time
 
 from genesis.utils import common as cmn
 
 
-def parse_inputs():
-    """
-    Parses the command line input arguments.
-
-    If there has not been an input or output file specified a RuntimeError will
-    be raised.
-
-    Parameters
-    ----------
-
-    None.
-
-    Returns
-    ----------
-
-    args: Dictionary.  Required.
-        Dictionary of arguments from the ``argparse`` package.
-        Dictionary is keyed by the argument name (e.g., args['fname_in']).
-    """
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("-f", "--fname_in", dest="fname_in",
-                        help="Path to the input HDF5 data file. Required.")
-    parser.add_argument("-o", "--fname_out", dest="fname_out",
-                        help="Path to the output HDF5 data file. Required.")
-    parser.add_argument("-s", "--sort_fields", dest="sort_fields",
-                        help="Field names we will be sorted on. ORDER IS "
-                        "IMPORTANT.  Order using the outer-most sort to the "
-                        "inner-most.  Separate each field name with a comma. "
-                        "Default: ForestID,Mass_200mean.",
-                        default="ForestID,Mass_200mean")
-    parser.add_argument("-i", "--HaloID", dest="halo_id",
-                        help="Field name for halo ID. Default: ID.",
-                        default="ID")
-    parser.add_argument("-p", "--ID_fields", dest="ID_fields",
-                        help="Field names for those that contain IDs.  "
-                        "Separate field names with a comma. "
-                        "Default: ID,Tail,Head,NextProgenitor,NextSubhalo,"
-                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail,hostHaloID",
-                        default=("ID,Tail,Head,NextProgenitor,NextSubhalo,"
-                        "PreviousProgenitor,PreviousSubhalo,RootHead,RootTail,hostHaloID"))
-    parser.add_argument("-x", "--index_mult_factor", dest="index_mult_factor",
-                        help="Conversion factor to go from a unique, "
-                        "per-snapshot halo index to a temporally unique haloID. "
-                        "Default: 1e12.", default=1e12)
-
-    args = parser.parse_args()
-
-    # We require an input file and an output one.
-    if (args.fname_in is None or args.fname_out is None):
-        parser.print_help()
-        raise RuntimeError
-
-    # We allow the user to enter an arbitrary number of sort fields and fields
-    # that contain IDs.  They are etnered as a single string separated by
-    # commas so need to split them up into a list.
-    args.ID_fields = (args.ID_fields).split(',')
-    args.sort_fields = args.sort_fields.split(',')
-
-    # Print some useful startup info. #
-    print("")
-    print("The HaloID field for each halo is '{0}'.".format(args.halo_id))
-    print("Sorting on the {0} fields".format(args.sort_fields))
-    print("The fields that contain IDs are {0}".format(args.ID_fields))
-    print("")
-
-    return vars(args)
-
-
-def get_sort_indices(file_in, snap_key, args):
+def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     """
     Gets the indices that will sort the HDF5 file.
 
-    This sorting uses the fields provided by the user in args. The sort fields
+    This sorting uses the fields provided by the user. The sort fields
     (or sort keys) we ordered such that the first key will peform the
     outer-most sort and the last key will perform the inner-most sort.
 
     Example:
-        args["sort_fields"] = ("ForestID", "Mass_200mean")
+        sort_fields = ["ForestID", "Mass_200mean"]
         ForestID = [1, 4, 39, 1, 1, 4]
         Mass_200mean = [4e9, 10e10, 8e8, 7e9, 3e11, 5e6]
 
@@ -97,51 +30,84 @@ def get_sort_indices(file_in, snap_key, args):
     Parameters
     ----------
 
-    file_in: HDF5 file.  Required.
+    file_in: HDF5 file.
         Open HDF5 file that we are sorting for. The data structure is assumed
         to be HDF5_File -> Snapshot_Keys -> Halo properties.
 
-    snap_key: String.  Required.
-        The field name for the snapshot we are accessing.
+    snap_key: String.
+        The snapshot field name for the snapshot we are accessing.
 
-    args: Dictionary.  Required.
-        Dictionary containing the argsion parameters specified at runtime.
-        Used to specify the field names we are sorting on.
+    sort_fields: List of strings. 
+        List containing the field names we are sorting on.
+
+        ..note::
+            The order of this sorting is such that the first key will perform
+            the outer-most sort and the last key will perform the inner-most
+            sort.
 
     Returns
     ----------
 
-    indices: numpy-array.  Required.
+    indices: `~numpy.ndarray` of integers. 
         Array containing the indices that sorts the data using the specified
         sort keys.
     """
 
     sort_keys = []
-    for key in reversed(args["sort_fields"]):
+
+    # We need to reverse `sort_fields` due to the behaviour of `~np.lexsort`. 
+    for key, direction in zip(reversed(sort_fields), reversed(sort_direction)):
         if key is None or "NONE" in key.upper():
             continue
-        sort_keys.append(file_in[snap_key][key])
+        if direction == -1: 
+            sort_keys.append(-np.array(file_in[snap_key][key]))
+        else:
+            sort_keys.append(np.array(file_in[snap_key][key]))
 
     indices = np.lexsort((sort_keys))
 
     return indices
 
 
-def sort_and_write_file(args):
+def forest_sorter(fname_in, fname_out, haloID_field="ID",
+                  sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
+                  sort_direction=np.array([1,1,-1]),
+                  ID_fields=["Head", "Tail", "RootHead", "RootTail",
+                             "ID", "hostHaloID"], index_mult_factor=1e12):
     """
-    Using the argsions specified by the command line, sorts the HDF5
-    file by the specified ID field and then sub-sorts by the specified
-    mass field.
+    Sorts and saves a HDF5 tree file on the specified sort fields.  The IDs of 
+    the halos are assume to use the index within the data file and hence will 
+    be updated to reflect the sorted order. 
 
-    The output file will be saved in this sorted order.
+    ..note::
+        The default parameters are chosen to match the ASTRO3D Genesis trees as
+        produced by VELOCIraptor + Treefrog.    
 
     Parameters
     ----------
 
-    args: Dictionary.  Required.
-        Contains the runtime variables such as input/output file names
-        and fields required for sorting.
-        For full contents of the dictionary refer to ``parse_inputs``.
+    fname_in, fname_out: String.
+        Path to the input HDF5 trees and path to where the sorted trees will be
+        saved. 
+
+    haloID_field: String. Default: 'ID'.
+        Field name within the HDF5 file that corresponds to the unique halo ID.
+
+    sort_fields: List of strings. Default: ['ForestID', 'hostHaloID',
+                                            'Mass_200mean'].
+        The HDF5 field names that the sorting will be performed on. The entries
+        are ordered such that the first field will be the outer-most sort and
+        the last field will be the inner-most sort.
+
+    ID_fields: List of string. Default: ['Head', 'Tail', 'RootHead', 'RootTail',
+                                        'ID', 'hostHaloID'].
+        The HDF5 field names that correspond to properties that use halo IDs.
+        As the halo IDs are updated to reflect the new sort order, these fields
+        must also be updated. 
+
+    index_mult_factor: Integer. Default: 1e12.
+        Multiplication factor to generate a temporally unique halo ID. See
+        `common.index_to_temporalID()`.
 
     Returns
     ----------
@@ -149,8 +115,20 @@ def sort_and_write_file(args):
     None.
     """
 
-    with h5py.File(args["fname_in"], "r") as f_in, \
-         h5py.File(args["fname_out"], "w") as f_out:
+    print("")
+    print("=================================")
+    print("Running Forest Sorter")
+    print("Input Unsorted Trees: {0}".format(fname_in))
+    print("Output Sorted Trees: {0}".format(fname_out))
+    print("Sort Fields: {0}".format(sort_fields))
+    print("Sort Direction: {0}".format(sort_direction))
+    print("Index Mult Factor: {0}".format(index_mult_factor))
+    print("=================================")
+    print("")
+
+
+    with h5py.File(fname_in, "r") as f_in, \
+         h5py.File(fname_out, "w") as f_out:
 
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
 
@@ -163,15 +141,15 @@ def sort_and_write_file(args):
         start_time = time.time()
         for snap_key in tqdm(Snap_Keys):
             # We only want to go through snapshots that contain halos.
-            if len(f_in[snap_key][args["halo_id"]]) == 0:
+            if len(f_in[snap_key][haloID_field]) == 0:
                 continue
 
             # Need to get the indices that sort the data according to the
             # specified keys.
+            indices = get_sort_indices(f_in, snap_key, sort_fields,
+                                       sort_direction)
 
-            indices = get_sort_indices(f_in, snap_key, args)
-
-            old_haloIDs = f_in[snap_key][args["halo_id"]][:]
+            old_haloIDs = f_in[snap_key][haloID_field][:]
             old_haloIDs_sorted = old_haloIDs[indices]
 
             # The ID of a halo depends on its snapshot-local index.
@@ -179,7 +157,7 @@ def sort_and_write_file(args):
             # simply be np.arange(len(Number of Halos)).
             new_haloIDs = cmn.index_to_temporalID(np.arange(len(indices)),
                                                   Snap_Nums[snap_key],
-                                                  args["index_mult_factor"])
+                                                  index_mult_factor)
 
             oldIDs_to_newIDs = dict(zip(old_haloIDs_sorted, new_haloIDs))
 
@@ -190,6 +168,10 @@ def sort_and_write_file(args):
 
             snapshot_indices[snap_key] = indices
             ID_maps[Snap_Nums[snap_key]] = oldIDs_to_newIDs
+
+            #f_out.create_dataset("newIDs", 
+            #                     list(ID_maps[Snap_Nums[snap_key]].values()))
+
 
         # For some ID fields (e.g., NextProgenitor), the value is -1. 
         # When we convert from the temporalID to a snapshot number, we subtract
@@ -216,25 +198,38 @@ def sort_and_write_file(args):
         print("Now writing out the snapshots in the sorted order.")
         start_time = time.time()
 
+        # Don't use name `snap_key` because there could be other fields such as
+        # 'header'.
         for key in tqdm(f_in.keys()):
-            cmn.copy_group(f_in, f_out, key, args)
+            cmn.copy_group(f_in, f_out, key)
+
+            if key in Snap_Keys:                
+                try:
+                    oldIDs = list(ID_maps[Snap_Nums[key]].keys())
+                except KeyError:
+                    pass
+                else:
+                    dataset_name = "{0}/oldIDs".format(key)
+                    f_out.create_dataset(dataset_name,
+                                         data=oldIDs)
+
             for field in f_in[key]:
 
                 # Some keys (e.g., 'Header') don't have snapshots so need an
                 # except to catch this.
                 try:
-                    NHalos = len(f_in[key][args["halo_id"]])
+                    NHalos = len(f_in[key][haloID_field])
                     if (NHalos == 0):
                         continue
                 except KeyError:
                     continue
 
-                if field in args["ID_fields"]:  # If this field has an ID...
+                if field in ID_fields:  # If this field has an ID...
                     # Need to get the oldIDs, find the snapshot they correspond
                     # to and then get the newIDs using our dictionary.                
                     oldID = f_in[key][field][:]
                     snapnum = cmn.temporalID_to_snapnum(oldID,
-                                                        args["index_mult_factor"])
+                                                        index_mult_factor)
                     newID = [ID_maps[snap][ID] for snap, ID in zip(snapnum,
                                                                    oldID)]
                     to_write = np.array(newID)  # Remember what we need to write.
@@ -250,9 +245,3 @@ def sort_and_write_file(args):
               format(end_time - start_time))
         print("Done!")
         print("")
-
-
-if __name__ == '__main__':
-
-    args = parse_inputs()
-    sort_and_write_file(args)
