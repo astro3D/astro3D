@@ -1,17 +1,18 @@
+from genesis.utils import common as cmn
+
 import numpy as np
 import h5py
 import time
 from tqdm import tqdm
 
-from genesis.utils import common as cmn
 
-def convert_indices(fname_in, fname_out, 
-                    haloID_field="ID", forestID_field="ForestID", 
-                    ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID", 
+def convert_indices(fname_in, fname_out,
+                    haloID_field="ID", forestID_field="ForestID",
+                    ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID",
                                "hostHaloID"], index_mult_factor=1e12):
     """
-    Converts temporally unique tree IDs to ones that are forest-local as 
-    required by the LHalo Trees format. 
+    Converts temporally unique tree IDs to ones that are forest-local as
+    required by the LHalo Trees format.
 
     The data-structure of the Treefrog trees is assumed to be HDF5 File ->
     Snapshots -> Halo Properties at each snapshot.
@@ -19,32 +20,32 @@ def convert_indices(fname_in, fname_out,
     A new HDF5 file is saved out with the updated IDs.
 
     ..note::
-        We require the input trees to be sorted via the forest ID 
+        We require the input trees to be sorted via the forest ID
         (`forestID_field`) and suggest to also sub-sort on hostHaloID and mass.
         Sorting can be done using the `forest_sorter()` function.
 
     ..note::
         The default parameters are chosen to match the ASTRO3D Genesis trees as
         produced by VELOCIraptor + Treefrog.
- 
+
     Parameters
     ----------
 
     fname_in, fname_out: String.
-        Path to the input HDF5 VELOCIraptor + treefrog trees and the path 
+        Path to the input HDF5 VELOCIraptor + treefrog trees and the path
         where the LHalo correct trees will be saved.
 
     haloID_field: String. Default: 'ID'.
         Field name within the HDF5 file that corresponds to the unique halo ID.
 
     forestID_field: String. Default: 'ForestID'.
-        Field name within the HDF5 file that corresponds to forest ID. 
+        Field name within the HDF5 file that corresponds to forest ID.
 
     ID_fields: List of string. Default: ['Head', 'Tail', 'RootHead', 'RootTail',
                                         'ID', 'hostHaloID'].
         The HDF5 field names that correspond to properties that use halo IDs.
         As the halo IDs are updated to match the required LHalo Tree format,
-        these must also be updated. 
+        these must also be updated.
 
     index_mult_factor: Integer. Default: 1e12.
         Multiplication factor to generate a temporally unique halo ID. See
@@ -82,7 +83,7 @@ def convert_indices(fname_in, fname_out,
         for key in tqdm(f_in.keys()):
             cmn.copy_group(f_in, f_out, key)
 
-        print("Now creating a dictionary that maps the old, global indices to " 
+        print("Now creating a dictionary that maps the old, global indices to "
               "ones that are forest-local.")
 
         start_time = time.time()
@@ -101,8 +102,7 @@ def convert_indices(fname_in, fname_out,
             oldIDs_global = []
             newIDs_global = []
 
-            forests_thissnap = \
-            np.unique(f_in[snap_key][forestID_field][:])
+            forests_thissnap = np.unique(f_in[snap_key][forestID_field][:])
 
             Forests_InSnap[snap_key] = forests_thissnap
 
@@ -116,9 +116,9 @@ def convert_indices(fname_in, fname_out,
                 idx_lower = offset
                 idx_upper = NHalos_snapshot + offset
 
-                oldIDs_thisforest = oldIDs[idx_lower:idx_upper] 
+                oldIDs_thisforest = oldIDs[idx_lower:idx_upper]
                 newIDs_thisforest = np.arange(NHalos_processed[forest-1],
-                                            NHalos_processed[forest-1] + NHalos_snapshot)
+                                              NHalos_processed[forest-1] + NHalos_snapshot)
 
                 for val1, val2 in zip(oldIDs_thisforest, newIDs_thisforest):
                     oldIDs_global.append(int(val1))
@@ -137,11 +137,11 @@ def convert_indices(fname_in, fname_out,
         # be less than 1 and when it's cast to an integer will result in 0.
         # So the 'Snapshot Number' for values of -1 will be 0.  We want to
         # preserve these -1 flags so we map -1 to -1.
-        ID_maps[0] = {-1:-1}
-                    
+        ID_maps[0] = {-1: -1}
+
         end_time = time.time()
-        print("Creation of dictionary took {0:3f} seconds." \
-              .format(end_time - start_time))
+        print("Creation of dictionary took {0:3f} "
+              "seconds.".format(end_time - start_time))
 
         print("Now going through all the snapshots and updating the IDs.")
         start_time = time.time()
@@ -154,9 +154,7 @@ def convert_indices(fname_in, fname_out,
             except KeyError:
                 continue
 
-            forests_thissnap = \
-            np.unique(f_in[snap_key][forestID_field][:])
-
+            forests_thissnap = np.unique(f_in[snap_key][forestID_field][:])
 
             for field in ID_fields:  # If this field has an ID...
 
@@ -169,7 +167,7 @@ def convert_indices(fname_in, fname_out,
                 # numpy array, this needs to be done manually in a `for`
                 # loop.
 
-                newID = [ID_maps[snap][ID] for snap, ID in zip(snapnum,  
+                newID = [ID_maps[snap][ID] for snap, ID in zip(snapnum,
                                                                oldID)]
                 f_out[snap_key][field][:] = newID
 

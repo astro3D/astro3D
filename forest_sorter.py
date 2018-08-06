@@ -1,15 +1,14 @@
 """
 Authors: Jacob Seiler, Manodeep Sinha
 """
-
 #!/usr/bin:env python
 from __future__ import print_function
+from genesis.utils import common as cmn
+
 import numpy as np
 import h5py
 from tqdm import tqdm
 import time
-
-from genesis.utils import common as cmn
 
 
 def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
@@ -37,7 +36,7 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     snap_key: String.
         The snapshot field name for the snapshot we are accessing.
 
-    sort_fields: List of strings. 
+    sort_fields: List of strings.
         List containing the field names we are sorting on.
 
         ..note::
@@ -48,18 +47,18 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     Returns
     ----------
 
-    indices: `~numpy.ndarray` of integers. 
+    indices: `~numpy.ndarray` of integers.
         Array containing the indices that sorts the data using the specified
         sort keys.
     """
 
     sort_keys = []
 
-    # We need to reverse `sort_fields` due to the behaviour of `~np.lexsort`. 
+    # We need to reverse `sort_fields` due to the behaviour of `~np.lexsort`.
     for key, direction in zip(reversed(sort_fields), reversed(sort_direction)):
         if key is None or "NONE" in key.upper():
             continue
-        if direction == -1: 
+        if direction == -1:
             sort_keys.append(-np.array(file_in[snap_key][key]))
         else:
             sort_keys.append(np.array(file_in[snap_key][key]))
@@ -71,24 +70,24 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
 
 def forest_sorter(fname_in, fname_out, haloID_field="ID",
                   sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
-                  sort_direction=np.array([1,1,-1]),
+                  sort_direction=np.array([1, 1, -1]),
                   ID_fields=["Head", "Tail", "RootHead", "RootTail",
                              "ID", "hostHaloID"], index_mult_factor=1e12):
     """
-    Sorts and saves a HDF5 tree file on the specified sort fields.  The IDs of 
-    the halos are assume to use the index within the data file and hence will 
-    be updated to reflect the sorted order. 
+    Sorts and saves a HDF5 tree file on the specified sort fields.  The IDs of
+    the halos are assume to use the index within the data file and hence will
+    be updated to reflect the sorted order.
 
     ..note::
         The default parameters are chosen to match the ASTRO3D Genesis trees as
-        produced by VELOCIraptor + Treefrog.    
+        produced by VELOCIraptor + Treefrog.
 
     Parameters
     ----------
 
     fname_in, fname_out: String.
         Path to the input HDF5 trees and path to where the sorted trees will be
-        saved. 
+        saved.
 
     haloID_field: String. Default: 'ID'.
         Field name within the HDF5 file that corresponds to the unique halo ID.
@@ -103,7 +102,7 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
                                         'ID', 'hostHaloID'].
         The HDF5 field names that correspond to properties that use halo IDs.
         As the halo IDs are updated to reflect the new sort order, these fields
-        must also be updated. 
+        must also be updated.
 
     index_mult_factor: Integer. Default: 1e12.
         Multiplication factor to generate a temporally unique halo ID. See
@@ -125,7 +124,6 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
     print("Index Mult Factor: {0}".format(index_mult_factor))
     print("=================================")
     print("")
-
 
     with h5py.File(fname_in, "r") as f_in, \
          h5py.File(fname_out, "w") as f_out:
@@ -169,18 +167,14 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
             snapshot_indices[snap_key] = indices
             ID_maps[Snap_Nums[snap_key]] = oldIDs_to_newIDs
 
-            #f_out.create_dataset("newIDs", 
-            #                     list(ID_maps[Snap_Nums[snap_key]].values()))
-
-
-        # For some ID fields (e.g., NextProgenitor), the value is -1. 
+        # For some ID fields (e.g., NextProgenitor), the value is -1.
         # When we convert from the temporalID to a snapshot number, we subtract
         # 1 and divide by the multiplication factor (default 1e12), then cast
         # to an integer. Hence -2 divided by a huge number will be less than 1
         # and when it's cast to an integer will result in 0.
         # So the 'Snapshot Number' for values of -1 will be 0.  We want to
         # preserve these -1 flags so we map -1 to -1.
-        ID_maps[0] = {-1:-1}
+        ID_maps[0] = {-1: -1}
 
         end_time = time.time()
         print("Creation of dictionary map took {0:3f} seconds"
@@ -203,7 +197,7 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
         for key in tqdm(f_in.keys()):
             cmn.copy_group(f_in, f_out, key)
 
-            if key in Snap_Keys:                
+            if key in Snap_Keys:
                 try:
                     oldIDs = list(ID_maps[Snap_Nums[key]].keys())
                 except KeyError:
@@ -226,7 +220,7 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
 
                 if field in ID_fields:  # If this field has an ID...
                     # Need to get the oldIDs, find the snapshot they correspond
-                    # to and then get the newIDs using our dictionary.                
+                    # to and then get the newIDs using our dictionary.
                     oldID = f_in[key][field][:]
                     snapnum = cmn.temporalID_to_snapnum(oldID,
                                                         index_mult_factor)
