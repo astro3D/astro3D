@@ -2,6 +2,11 @@
 
 from __future__ import print_function
 
+__all__ = ("snap_key_to_snapnum", "index_to_temporalID",
+           "temporalID_to_snapnum", "get_snapkeys_and_nums", 
+           "copy_group", "get_halos_per_forest", "search_dict_of_lists", )
+
+
 def snap_key_to_snapnum(snap_key):
     """
     Given the name of a snapshot key, finds the associated snapshot number.
@@ -101,54 +106,11 @@ def index_to_temporalID(index, snapnum, index_mult_factor):
 
     >>> index_to_temporalID(23, 18, 1e12)
     18000000000024
-
-#    >>> test_list = [25, 100, 4]
-#    >>> test_snapnums = [23, 12, 60]
-#    >>> index_to_temporalID(test_list, test_snapnums, 1e12)
-    [2300000026, 1200000101, 600000005] 
     """
 
     temporalID = snapnum*int(index_mult_factor) + index + 1
 
     return temporalID
-
-
-def get_snapkeys_and_nums(file_keys):
-    """
-    Gets names of snapshot keys and snapshot numbers.
-
-    We assume that the snapshot data keys are named to include the word
-    "snap" (case insensitive). We also assume that the snapshot number
-    for each snapshot key will be in a single cluster towards the end
-    of the key. If this is not the case we issue a warning showing what
-    we believe to be the corresponding snapshot number.
-
-    Parameters
-    ----------
-
-    file_keys: Keys.
-        Keys from a given file or dataset.
-
-    Returns
-    ----------
-
-    Snap_Keys: List of strings.
-        Names of the snapshot keys within the passed keys.
-
-    Snap_Nums: Dictionary of integers keyed by `Snap_Keys`.
-        Snapshot number of each snapshot key.
-
-    Examples
-    ----------
-
-    """
-
-    Snap_Keys = [key for key in file_keys if ("SNAP" in key.upper())]
-    Snap_Nums = dict()
-    for key in Snap_Keys:
-        Snap_Nums[key] = snap_key_to_snapnum(key)
-
-    return Snap_Keys, Snap_Nums
 
 
 def temporalID_to_snapnum(temporalID, index_mult_factor):
@@ -190,15 +152,50 @@ def temporalID_to_snapnum(temporalID, index_mult_factor):
     >>> test_array = np.array([20000000000050, 134000000000005])
     >>> temporalID_to_snapnum(test_array, 1e12)
     array([ 20, 134])
-
     """
+
     import numpy as np
+
     if isinstance(temporalID, list) or isinstance(temporalID, np.ndarray):
         snapnum = ((np.subtract(temporalID,1)) / index_mult_factor).astype(int)
     else:
         snapnum = int((temporalID - 1) / index_mult_factor)
 
     return snapnum
+
+
+def get_snapkeys_and_nums(file_keys):
+    """
+    Gets names of snapshot keys and snapshot numbers.
+
+    We assume that the snapshot data keys are named to include the word
+    "snap" (case insensitive). We also assume that the snapshot number
+    for each snapshot key will be in a single cluster towards the end
+    of the key. If this is not the case we issue a warning showing what
+    we believe to be the corresponding snapshot number.
+
+    Parameters
+    ----------
+
+    file_keys: Keys.
+        Keys from a given file or dataset.
+
+    Returns
+    ----------
+
+    Snap_Keys: List of strings.
+        Names of the snapshot keys within the passed keys.
+
+    Snap_Nums: Dictionary of integers keyed by `Snap_Keys`.
+        Snapshot number of each snapshot key.
+    """
+
+    Snap_Keys = [key for key in file_keys if ("SNAP" in key.upper())]
+    Snap_Nums = dict()
+    for key in Snap_Keys:
+        Snap_Nums[key] = snap_key_to_snapnum(key)
+
+    return Snap_Keys, Snap_Nums
 
 
 def copy_group(file_in, file_out, key):
@@ -348,6 +345,9 @@ def search_dict_of_lists(value, dictionary):
 
     False
         Otherwise.
+
+    Examples
+    ----------
 
     >>> my_dict = {'People' : ['John', 'Mary', 'Joseph'],
     ...            'Age'    : [21, 8, 87],

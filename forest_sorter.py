@@ -10,6 +10,8 @@ import h5py
 from tqdm import tqdm
 import time
 
+__all__ = ("get_sort_indices", "forest_sorter", )
+
 
 def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     """
@@ -18,13 +20,6 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     This sorting uses the fields provided by the user. The sort fields
     (or sort keys) we ordered such that the first key will peform the
     outer-most sort and the last key will perform the inner-most sort.
-
-    Example:
-        sort_fields = ["ForestID", "Mass_200mean"]
-        ForestID = [1, 4, 39, 1, 1, 4]
-        Mass_200mean = [4e9, 10e10, 8e8, 7e9, 3e11, 5e6]
-
-        Then the indices would be [0, 3, 4, 5, 1, 2]
 
     Parameters
     ----------
@@ -39,7 +34,7 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     sort_fields: List of strings.
         List containing the field names we are sorting on.
 
-        ..note::
+        .. note::
             The order of this sorting is such that the first key will perform
             the outer-most sort and the last key will perform the inner-most
             sort.
@@ -50,6 +45,15 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     indices: `~numpy.ndarray` of integers.
         Array containing the indices that sorts the data using the specified
         sort keys.
+
+    Examples 
+    ----------
+
+        sort_fields = ["ForestID", "Mass_200mean"]
+        ForestID = [1, 4, 39, 1, 1, 4]
+        Mass_200mean = [4e9, 10e10, 8e8, 7e9, 3e11, 5e6]
+
+        Then the indices would be [0, 3, 4, 5, 1, 2]
     """
 
     sort_keys = []

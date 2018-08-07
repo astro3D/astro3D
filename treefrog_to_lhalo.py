@@ -18,6 +18,12 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 
+__all__ = ("get_LHalo_datastruct", "fix_nextprog", "fix_flybys",
+           "fix_nextsubhalo", "treefrog_to_lhalo", "determine_forests",
+           "write_header", "populate_forest", "fill_LHalo_properties",
+           "convert_binary_to_hdf5", "get_hubble_h", )
+
+
 def get_LHalo_datastruct():
     """
     Generates the LHalo numpy structured array.
