@@ -22,13 +22,13 @@ def snap_key_to_snapnum(snap_key):
     Parameters
     ----------
 
-    snap_key: String.  Required.
+    snap_key: String.
         The name of the snapshot key.
 
     Returns
     ----------
 
-    snapnum: Integer.  Required.
+    snapnum: Integer.
         The snapshot number that corresponds to the snapshot key.
 
     Examples
@@ -85,20 +85,20 @@ def index_to_temporalID(index, snapnum, index_mult_factor):
     Parameters
     ----------
 
-    index: array-like of integers, or integer. Required.
+    index: array-like of integers, or integer.
         Array or single value that describes the snapshot-local haloID.
 
-    snapnum: integer.  Required
+    snapnum: Integer.
         Snapshot that the halo/s are/is located at.
 
-    index_mult_factor: integer. Required
+    index_mult_factor: Integer.
         Factor to convert a the snapshot-unique halo index to a temporally
         unique halo ID.
 
     Returns
     ----------
     
-    index: array-like of integers, or integer. Required.
+    index: array-like of integers, or integer.
         Array or single value that contains the temporally unique haloID.
 
     Examples
@@ -120,17 +120,17 @@ def temporalID_to_snapnum(temporalID, index_mult_factor):
     Parameters
     ----------
 
-    ID: array-like of integers, or integer. Required.
+    ID: array-like of integers, or integer.
         Array or single value that describes the temporalID/s.
 
-    index_mult_factor: integer. Required.
+    index_mult_factor: integer.
         Factor to convert to from temporally-unique halo ID to snap-shot unique
         halo index.
 
     Returns
     ----------
 
-    snapnum: array-like of integers, or integer. Required.
+    snapnum: array-like of integers, or integer.
         Array or single value that contains the snapshot number corresponding
         to the temporal ID.
 
@@ -214,8 +214,8 @@ def copy_group(file_in, file_out, key):
 
     Returns
     ----------
-
-    None.
+    None
+        None
     """
 
     group_path = file_in[key].parent.name  # Name of the group path.
@@ -232,15 +232,11 @@ def get_halos_per_forest(f_in, Snap_Keys, haloID_field="ID",
     The resulting Dictionary is nested with the outer-key given by the ForestID
     and the inner-key given by the snapshot field name.
 
-    E.g., If forest 5 has 10 halos at Snapshot 20 and 100 at Snapshot 21 then,
-        NHalos_forest[5]['Snap_020'] = 10
-        NHalos_forest[5]['Snap_021'] = 100
-
     We also generate the offset for each Forest at each snapshot.  This is
     necessary because whilst Forest 5 may saved first at snapshot 20, it isn't
     necessarily saved first at snapshot 21.
 
-    ..note::
+    .. note::
         The default parameters are chosen to match the ASTRO3D Genesis trees as
         produced by VELOCIraptor + Treefrog.    
 
@@ -263,12 +259,12 @@ def get_halos_per_forest(f_in, Snap_Keys, haloID_field="ID",
     Returns
     ----------
 
-    NHalos_forest: Nested Dictionary. Required.
+    NHalos_forest: Nested Dictionary.
         Nested dictionary that contains the number of halos for each Forest at
         each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
         key.
 
-    NHalos_forest_offset: Nested Dictionary. Required.
+    NHalos_forest_offset: Nested Dictionary.
         Nested dictionary that contains the offset for each Forest at each
         snapshot. Outer-key is the ForestID and inner-key is the snapshot key.
         This is required because whilst the tree is sorted by ForestID, the
@@ -352,7 +348,6 @@ def search_dict_of_lists(value, dictionary):
     >>> my_dict = {'People' : ['John', 'Mary', 'Joseph'],
     ...            'Age'    : [21, 8, 87],
     ...            'Height' : [186.4, 203.1, 87.8]}
-
     >>> search_dict_of_lists("John", my_dict)
     True
 

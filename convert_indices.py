@@ -21,12 +21,12 @@ def convert_indices(fname_in, fname_out,
 
     A new HDF5 file is saved out with the updated IDs.
 
-    ..note::
+    .. note::
         We require the input trees to be sorted via the forest ID
         (`forestID_field`) and suggest to also sub-sort on hostHaloID and mass.
         Sorting can be done using the `forest_sorter()` function.
 
-    ..note::
+    .. note::
         The default parameters are chosen to match the ASTRO3D Genesis trees as
         produced by VELOCIraptor + Treefrog.
 

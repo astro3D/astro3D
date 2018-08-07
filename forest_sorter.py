@@ -82,7 +82,7 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
     the halos are assume to use the index within the data file and hence will
     be updated to reflect the sorted order.
 
-    ..note::
+    .. note::
         The default parameters are chosen to match the ASTRO3D Genesis trees as
         produced by VELOCIraptor + Treefrog.
 

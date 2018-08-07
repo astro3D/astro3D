@@ -28,14 +28,14 @@ def get_LHalo_datastruct():
     """
     Generates the LHalo numpy structured array.
 
-    ..note::
+    .. note::
         Ideally an LHalo tree would specify properties such as
         position/velocity/spin as a single Nx3 array.  However due to the
         way `~h5py` indexes its elements, slicing the input data in such a way
         is not possible. Instead we have used individual 1D arrays which when 
         read by a binary reader will correctly correspond to an Nx3 array.
 
-    ..note::
+    .. note::
         If you specify a HDF5 file to be written, the resulting file will
         contain position/velocity/spin as single Nx3 arrays. 
 
@@ -144,7 +144,7 @@ def fix_flybys(forest_halos, NHalos_root):
     'True' FoF halo and update the Treefrog-equivalent field of
     `FirstHaloInFOFgroup` to point to this most massive halo.
 
-    ..note::
+    .. note::
         We pass all halos within the forest to this function but only those at
         the root snapshot are altered.
 
@@ -204,7 +204,7 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
     Fixes the `NextHaloInFOFgroup` field for a single forest at a single
     snapshot.
 
-    ..note::
+    .. note::
         We pass all halos within the forest to this function but only alter
         those within a single snapshot.
 
@@ -282,7 +282,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
     The data-structure of the Treefrog trees is assumed to be HDF5 File ->
     Snapshots -> Halo Properties at each snapshot.
 
-    ..note::
+    .. note::
         We require the input trees to be sorted via the forest ID
         (`forestID_field`) and suggest to also sub-sort on hostHaloID and mass.
         Sorting can be done using the `forest_sorter()` function.
@@ -290,7 +290,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         We also require the input trees to have IDs that are LHalo compatible;
         that is, they are forest local.
 
-    ..note::
+    .. note::
         The default parameters are chosen to match the ASTRO3D Genesis trees as
         produced by VELOCIraptor + Treefrog.
 
@@ -511,7 +511,7 @@ def determine_forests(NHalos_forest, all_forests):
     """
     Load balances the number of halos across processors.
 
-    ..note::
+    .. note::
         Since we do not split trees across processors, this function will
         result in processors having an unequal number of trees (but similar
         total number of halos) across processors.
@@ -716,7 +716,7 @@ def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
     """
     Grabs all the properties from the input HDF5 file for the current snapshot.
 
-    ..note::
+    .. note::
         The passed parameter `f_in` should correspond to the **snapshot group**
         that contains the halo properties datasets.  E.g., if we are filling
         the halos for Snapshot 43 with key `Snap_043`, this function should be
@@ -732,7 +732,7 @@ def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
                   `get_LHalo_datastruct()`
         Data structure to hold all the halos for this forest.
 
-        ..note::
+        .. note::
             We pass the entire forest array here but only update a slice of it.
 
     halo_indices: List of integers.
@@ -824,7 +824,7 @@ def convert_binary_to_hdf5(fname_in, fname_out):
     """
     Converts a binary LHalo Tree file to HDF5 format.
 
-    ..note::
+    .. note::
         Multi-dimensional arrays (e.g., 'Position') are saved as Nx3 arrays.
 
     Parameters
