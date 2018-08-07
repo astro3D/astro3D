@@ -205,11 +205,11 @@ def copy_group(file_in, file_out, key):
     Parameters
     ----------
 
-    file_in, file_out: Open HDF5 files.  Required.
+    file_in, file_out: Open HDF5 files.
         HDF5 files for the data being copied (file_in) and the file the
         data is being copied to (file_out).
 
-    key: String.  Required.
+    key: String. 
         Name of the HDF5 group being copied.
 
     Returns
@@ -243,10 +243,10 @@ def get_halos_per_forest(f_in, Snap_Keys, haloID_field="ID",
     Parameters
     ----------
 
-    f_in: Open HDF5 file. Required.
+    f_in: Open HDF5 file. 
         HDF5 file that contains the sorted trees.
 
-    Snap_Keys: List of strings. Required.
+    Snap_Keys: List of strings.
         List of keys that correspond to the fields containing the snapshot
         data.
 
