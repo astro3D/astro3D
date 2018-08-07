@@ -328,7 +328,50 @@ def get_halos_per_forest(f_in, Snap_Keys, haloID_field="ID",
 
 
 def search_dict_of_lists(value, dictionary):
+    """
+    Search through a dictionary of lists for a given value.
 
+    Parameters
+    ----------
+
+    value: Any data-type.
+        The value that we are searching for in the lists.
+
+    dictionary: Dictionary of lists.
+        A dictionary of lists we're searching through. 
+ 
+    Returns
+    ----------
+
+    True
+        If the value is in the dictionary.
+
+    False
+        Otherwise.
+
+    >>> my_dict = {'People' : ['John', 'Mary', 'Joseph'],
+    ...            'Age'    : [21, 8, 87],
+    ...            'Height' : [186.4, 203.1, 87.8]}
+
+    >>> search_dict_of_lists("John", my_dict)
+    True
+
+    >>> search_dict_of_lists("Carol", my_dict)
+    False
+
+    >>> search_dict_of_lists(87, my_dict)
+    True
+
+    >>> search_dict_of_lists(5, my_dict)
+    False
+
+    >>> search_dict_of_lists(186.4, my_dict)
+    True
+
+    >>> search_dict_of_lists(186.9, my_dict)
+    False
+    """
+    
     for key in dictionary.keys():
         if value in dictionary[key]:
             return True
@@ -339,8 +382,4 @@ def search_dict_of_lists(value, dictionary):
 if __name__ == "__main__":
     import doctest
     import numpy as np
-    test_list = [25, 100, 4]
-    test_snapnums = [23, 12, 60]
-    print(index_to_temporalID(list(np.arange(0,10)), list(np.arange(0,10)), 1e12))
-    print("QJTOETQ")
     doctest.testmod()

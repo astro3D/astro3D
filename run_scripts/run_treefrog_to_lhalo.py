@@ -18,7 +18,7 @@ if __name__ == '__main__':
     haloID_field = "ID"
     forestID_field = "ForestID"
     Nforests = 10
-    write_binary_flag = 0
+    write_binary_flag = 2
 
     frog_to_l.treefrog_to_lhalo(fname_in, fname_out,
                                 haloID_field, forestID_field, Nforests,

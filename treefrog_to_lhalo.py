@@ -22,6 +22,17 @@ def get_LHalo_datastruct():
     """
     Generates the LHalo numpy structured array.
 
+    ..note::
+        Ideally an LHalo tree would specify properties such as
+        position/velocity/spin as a single Nx3 array.  However due to the
+        way `~h5py` indexes its elements, slicing the input data in such a way
+        is not possible. Instead we have used individual 1D arrays which when 
+        read by a binary reader will correctly correspond to an Nx3 array.
+
+    ..note::
+        If you specify a HDF5 file to be written, the resulting file will
+        contain position/velocity/spin as single Nx3 arrays. 
+
     Parameters
     ----------
 
@@ -30,8 +41,12 @@ def get_LHalo_datastruct():
     Returns
     ----------
 
-    LHalo_Desc: numpy structured array.  Required.
+    LHalo_Desc: numpy structured array.
         Structured array for the LHaloTree data format.
+
+    mutltipledim_names: Dictionary of lists.
+        Specifies the field names for multi-dimensional arrays and the 1D LHalo 
+        components. 
     """
 
     LHalo_Desc_full = [
@@ -445,18 +460,26 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                 group_name = "tree_{0:03d}".format(forestID)
                 f_out.create_group(group_name)
 
+                # Need to be careful here.  Some properties (e.g., 'Position') we
+                # want to save as Nx3 arrays (instead of 3 Nx1 arrays).  So
+                # first save only those arrays that aren't multi-dimensional.
                 for subgroup_name in LHalo_Desc.names:
                     if not cmn.search_dict_of_lists(subgroup_name, multipledim_names):
                         f_out[group_name][subgroup_name] = forest_halos[subgroup_name]
 
+                # Then go through all the multi-dimensional arrays and save 
+                # an Nx3 array that contains all the data.
                 for name in multipledim_names:
 
+                    # Initialize an Nx3 array.
                     Ndim = len(multipledim_names[name])
-                    array = np.zeros((len(forest_halos),Ndim))
+                    array = np.zeros((len(forest_halos), Ndim))
 
+                    # Then populate that array.
                     for dim, dim_name in enumerate(multipledim_names[name]):
                         array[:, dim] = forest_halos[dim_name] 
 
+                    # Finally save it.
                     f_out[group_name][name] = array 
 
         # End of Forests Loop.
@@ -795,6 +818,9 @@ def convert_binary_to_hdf5(fname_in, fname_out):
     """
     Converts a binary LHalo Tree file to HDF5 format.
 
+    ..note::
+        Multi-dimensional arrays (e.g., 'Position') are saved as Nx3 arrays.
+
     Parameters
     ----------
 
@@ -837,19 +863,27 @@ def convert_binary_to_hdf5(fname_in, fname_out):
             tree_name = "tree_{0:03d}".format(tree_idx)
             hdf5_file.create_group(tree_name)
 
+            # Need to be careful here.  Some properties (e.g., position) we
+            # want to save as Nx3 arrays (instead of 3 Nx1 arrays).  So
+            # first save only those arrays that aren't multi-dimensional.
             for subgroup_name in LHalo_Desc.names:
                 if not cmn.search_dict_of_lists(subgroup_name, multipledim_names):
-                    hdf5_file[group_name][subgroup_name] = forest_halos[subgroup_name]
+                    hdf5_file[tree_name][subgroup_name] = binary_tree[subgroup_name]
 
+            # Then go through all the multi-dimensional arrays and save 
+            # an Nx3 array that contains all the data.
             for name in multipledim_names:
 
+                # Initialize an Nx3 array.
                 Ndim = len(multipledim_names[name])
-                array = np.zeros((len(forest_halos),Ndim))
+                array = np.zeros((len(binary_tree), Ndim))
 
+                # Then populate that array.
                 for dim, dim_name in enumerate(multipledim_names[name]):
-                    array[:, dim] = forest_halos[dim_name] 
+                    array[:, dim] = binary_tree[dim_name] 
 
-                hdf5_file[group_name][name] = array 
+                # Finally save it.
+                hdf5_file[tree_name][name] = array 
 
 
 def get_hubble_h(f_in):
