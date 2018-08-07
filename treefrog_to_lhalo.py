@@ -443,11 +443,11 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                 forest_halos.tofile(f_out)
             else:
                 group_name = "tree_{0:03d}".format(forestID)
-                hdf5_file.create_group(group_name)
+                f_out.create_group(group_name)
 
                 for subgroup_name in LHalo_Desc.names:
-                    if cmn.search_dict_of_lists(subgroup_name, multipledim_names):
-                        hdf5_file[group_name][subgroup_name] = forest_halos[subgroup_name]
+                    if not cmn.search_dict_of_lists(subgroup_name, multipledim_names):
+                        f_out[group_name][subgroup_name] = forest_halos[subgroup_name]
 
                 for name in multipledim_names:
 
@@ -457,7 +457,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                     for dim, dim_name in enumerate(multipledim_names[name]):
                         array[:, dim] = forest_halos[dim_name] 
 
-                    hdf5_file[group_name][name] = array 
+                    f_out[group_name][name] = array 
 
         # End of Forests Loop.
 
@@ -598,7 +598,7 @@ def write_header(fname_out, Nforests, totNHalos, halos_per_forest,
 
         with h5py.File(fname_out, "w") as f_out:
             f_out.create_group("Header")
-            f_out["Header"].attrs.create("Ntrees", Nforest, dtype=np.int32)
+            f_out["Header"].attrs.create("Ntrees", Nforests, dtype=np.int32)
             f_out["Header"].attrs.create("totNHalos", totNHalos, 
                                              dtype=np.int32)
             f_out["Header"].attrs.create("TreeNHalos", halos_per_forest, 
@@ -807,8 +807,8 @@ def convert_binary_to_hdf5(fname_in, fname_out):
 
     None.
     """
-
-    LHalo_Struct = get_LHalo_datastruct()
+    
+    LHalo_Desc, multipledim_names = get_LHalo_datastruct()
 
     with open(fname_in, "rb") as binary_file, \
          h5py.File(fname_out, "w") as hdf5_file:
@@ -831,14 +831,25 @@ def convert_binary_to_hdf5(fname_in, fname_out):
 
         # Now loop over each tree and write the information to the HDF5 file.
         for tree_idx in trange(NTrees):
-            binary_tree = np.fromfile(binary_file, LHalo_Struct,
+            binary_tree = np.fromfile(binary_file, LHalo_Desc,
                                       NHalosPerTree[tree_idx])
 
             tree_name = "tree_{0:03d}".format(tree_idx)
             hdf5_file.create_group(tree_name)
 
-            for subgroup_name in LHalo_Struct.names:
-                hdf5_file[tree_name][subgroup_name] = binary_tree[subgroup_name]
+            for subgroup_name in LHalo_Desc.names:
+                if not cmn.search_dict_of_lists(subgroup_name, multipledim_names):
+                    hdf5_file[group_name][subgroup_name] = forest_halos[subgroup_name]
+
+            for name in multipledim_names:
+
+                Ndim = len(multipledim_names[name])
+                array = np.zeros((len(forest_halos),Ndim))
+
+                for dim, dim_name in enumerate(multipledim_names[name]):
+                    array[:, dim] = forest_halos[dim_name] 
+
+                hdf5_file[group_name][name] = array 
 
 
 def get_hubble_h(f_in):
