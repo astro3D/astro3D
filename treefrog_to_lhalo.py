@@ -66,7 +66,11 @@ def get_LHalo_datastruct():
     formats = [LHalo_Desc_full[i][1] for i in range(len(LHalo_Desc_full))]
     LHalo_Desc = np.dtype({'names': names, 'formats': formats}, align=True)
 
-    return LHalo_Desc
+    multipledim_names = {"Pos": ["Posx", "Posy", "Posz"],
+                         "Vel" : ["Velx", "Vely", "Velz"],
+                         "Spin" : ["Spinx", "Spiny", "Spinz"]}
+
+    return LHalo_Desc, multipledim_names
 
 
 def fix_nextprog(forest_halos):
@@ -312,7 +316,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         print("=================================")
         print("")
 
-    LHalo_Desc = get_LHalo_datastruct()
+    LHalo_Desc, multipledim_names = get_LHalo_datastruct()
 
     with h5py.File(fname_in, "r") as f_in:
         Snap_Keys, Snap_Nums = cmn.get_snapkeys_and_nums(f_in.keys())
@@ -442,7 +446,18 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                 hdf5_file.create_group(group_name)
 
                 for subgroup_name in LHalo_Desc.names:
-                    hdf5_file[group_name][subgroup_name] = forest_halos[subgroup_name]
+                    if cmn.search_dict_of_lists(subgroup_name, multipledim_names):
+                        hdf5_file[group_name][subgroup_name] = forest_halos[subgroup_name]
+
+                for name in multipledim_names:
+
+                    Ndim = len(multipledim_names[name])
+                    array = np.zeros((len(forest_halos),Ndim))
+
+                    for dim, dim_name in enumerate(multipledim_names[name]):
+                        array[:, dim] = forest_halos[dim_name] 
+
+                    hdf5_file[group_name][name] = array 
 
         # End of Forests Loop.
 

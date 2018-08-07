@@ -327,6 +327,15 @@ def get_halos_per_forest(f_in, Snap_Keys, haloID_field="ID",
     return NHalos_forest, NHalos_forest_offset
 
 
+def search_dict_of_lists(value, dictionary):
+
+    for key in dictionary.keys():
+        if value in dictionary[key]:
+            return True
+
+    return False
+
+
 if __name__ == "__main__":
     import doctest
     import numpy as np
