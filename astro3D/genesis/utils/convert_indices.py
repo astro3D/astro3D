@@ -37,19 +37,18 @@ def convert_indices(fname_in, fname_out,
         Path to the input HDF5 VELOCIraptor + treefrog trees and the path
         where the LHalo correct trees will be saved.
 
-    haloID_field: String. Default: 'ID'.
+    haloID_field: String, optional
         Field name within the HDF5 file that corresponds to the unique halo ID.
 
-    forestID_field: String. Default: 'ForestID'.
+    forestID_field: String, optional
         Field name within the HDF5 file that corresponds to forest ID.
 
-    ID_fields: List of string. Default: ['Head', 'Tail', 'RootHead', 'RootTail',
-                                        'ID', 'hostHaloID'].
+    ID_fields: List of string, optional
         The HDF5 field names that correspond to properties that use halo IDs.
         As the halo IDs are updated to match the required LHalo Tree format,
         these must also be updated.
 
-    index_mult_factor: Integer. Default: 1e12.
+    index_mult_factor: Integer, optional
         Multiplication factor to generate a temporally unique halo ID. See
         `common.index_to_temporalID()`.
 

@@ -17,7 +17,6 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-
 __all__ = ("treefrog_to_lhalo", )
 
 #__all__ = ("get_LHalo_datastruct", "fix_nextprog", "fix_flybys",
@@ -299,21 +298,21 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
     Parameters
     ----------
 
-    fname_in, fname_out: String.
+    fname_in, fname_out : String
         Path to the input HDF5 VELOCIraptor + treefrog trees and the path
         where the LHalo binary file will be saved.
 
-    haloID_field: String. Default: 'ID'.
+    haloID_field : String, optional
         Field name within the HDF5 file that corresponds to the unique halo ID.
 
-    forestID_field: String. Default: 'ForestID'.
+    forestID_field : String, optional
         Field name within the HDF5 file that corresponds to forest ID.
 
-    Nforests: Integer. Default: None.
+    Nforests : Integer, optional
         The number of forests to be processed. If `None` is passed then all
         forests are processed.
 
-    write_binary_flag: Integer. Default: 1.
+    write_binary_flag : Integer, optional
         Flag to decide whether to write to a binary or HDF5 file.  
         0: HDF5 file only.
         1: Binary file only.

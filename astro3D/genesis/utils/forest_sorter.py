@@ -89,26 +89,24 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
     Parameters
     ----------
 
-    fname_in, fname_out: String.
+    fname_in, fname_out : String.
         Path to the input HDF5 trees and path to where the sorted trees will be
         saved.
 
-    haloID_field: String. Default: 'ID'.
+    haloID_field : String, optional
         Field name within the HDF5 file that corresponds to the unique halo ID.
 
-    sort_fields: List of strings. Default: ['ForestID', 'hostHaloID',
-                                            'Mass_200mean'].
+    sort_fields : List of strings, optional
         The HDF5 field names that the sorting will be performed on. The entries
         are ordered such that the first field will be the outer-most sort and
         the last field will be the inner-most sort.
 
-    ID_fields: List of string. Default: ['Head', 'Tail', 'RootHead', 'RootTail',
-                                        'ID', 'hostHaloID'].
+    ID_fields : List of strings, optional
         The HDF5 field names that correspond to properties that use halo IDs.
         As the halo IDs are updated to reflect the new sort order, these fields
         must also be updated.
 
-    index_mult_factor: Integer. Default: 1e12.
+    index_mult_factor: Integer, optional
         Multiplication factor to generate a temporally unique halo ID. See
         `common.index_to_temporalID()`.
 
