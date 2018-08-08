@@ -1,0 +1,21 @@
+language: python
+
+python:
+  - '3.5'
+  - '3.6'
+  
+install:
+  - python setup.py install
+  - pip install -r requirements.txt
+script:
+  - python -c "import genesis"
+  - python -c "import genesis; print(genesis.__version__)"
+  - pytest 
+
+notifications:
+  email:
+    recipients:
+      - jseiler@swin.edu.au 
+    on_success: change 
+    on_failure: always
+  
