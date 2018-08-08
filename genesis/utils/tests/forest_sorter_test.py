@@ -8,8 +8,8 @@ import os
 import pytest
 from tqdm import tqdm
 
-from genesis.utils import forest_sorter as fs
-from genesis.utils import common as cmn
+from astro3D.genesis.utils import forest_sorter as fs
+from astro3D.genesis.utils import common as cmn
 
 
 test_dir = os.path.dirname(os.path.realpath(__file__))

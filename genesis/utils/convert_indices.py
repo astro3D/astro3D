@@ -1,4 +1,4 @@
-from genesis.utils import common as cmn
+from astro3D.genesis.utils import common as cmn
 
 import numpy as np
 import h5py
