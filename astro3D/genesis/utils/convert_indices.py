@@ -11,7 +11,7 @@ __all__ = ("convert_indices", )
 def convert_indices(fname_in, fname_out,
                     haloID_field="ID", forestID_field="ForestID",
                     ID_fields=["Head", "Tail", "RootHead", "RootTail", "ID",
-                               "hostHaloID"], index_mult_factor=1e12):
+                               "hostHaloID"], index_mult_factor=int(1e12)):
     """
     Converts temporally unique tree IDs to ones that are forest-local as
     required by the LHalo Trees format.
