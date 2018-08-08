@@ -8,8 +8,8 @@ install:
   - python setup.py install
   - pip install -r requirements.txt
 script:
-  - python -c "import genesis"
-  - python -c "import genesis; print(genesis.__version__)"
+  - python -c "import astro3D"
+  - python -c "import astro3D; print(astro3D.__version__)"
   - pytest 
 
 notifications:
