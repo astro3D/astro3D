@@ -48,8 +48,7 @@ def setup_packages():
         provides=[pkgname],
         packages=find_packages(),
         python_requires='>=3.5',
-        install_requires=['setuptools', 'numpy', 'h5py'],
-        run_requires=['mpi4py'],
+        install_requires=['setuptools', 'numpy', 'h5py', 'mpi4py'],
     )
 
     setup(**metadata)
