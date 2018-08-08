@@ -53,6 +53,7 @@ extensions = [
     'sphinx.ext.napoleon',
 ]
 
+napoleon_use_param = False
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
