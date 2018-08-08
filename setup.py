@@ -30,7 +30,7 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 def setup_packages():
-    pkgname = "genesis"
+    pkgname = "astro3D"
     version = find_version(pkgname, "__init__.py")
     author = "Manodeep Sinha"
     author_email = "manodeep@gmail.com"
