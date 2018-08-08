@@ -1,0 +1,474 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>astro3D.genesis.utils package &#8212; genesis  documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="astro3D.genesis package" href="astro3D.genesis.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="astro3D.genesis.html" title="astro3D.genesis package"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">genesis  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="astro3D.html" >astro3D package</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="astro3D.genesis.html" accesskey="U">astro3D.genesis package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-astro3D.genesis.utils">
+<span id="astro3d-genesis-utils-package"></span><h1>astro3D.genesis.utils package<a class="headerlink" href="#module-astro3D.genesis.utils" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-astro3D.genesis.utils.common">
+<span id="astro3d-genesis-utils-common-module"></span><h2>astro3D.genesis.utils.common module<a class="headerlink" href="#module-astro3D.genesis.utils.common" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="astro3D.genesis.utils.common.copy_group">
+<code class="descclassname">astro3D.genesis.utils.common.</code><code class="descname">copy_group</code><span class="sig-paren">(</span><em>file_in</em>, <em>file_out</em>, <em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.common.copy_group" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copies HDF5 group into a new HDF5 file (with same data-structure).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file_out</strong> (<em>file_in</em><em>,</em>) – HDF5 files for the data being copied (file_in) and the file the
+data is being copied to (file_out).</li>
+<li><strong>key</strong> (<em>String.  Required.</em>) – Name of the HDF5 group being copied.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="astro3D.genesis.utils.common.get_halos_per_forest">
+<code class="descclassname">astro3D.genesis.utils.common.</code><code class="descname">get_halos_per_forest</code><span class="sig-paren">(</span><em>f_in</em>, <em>Snap_Keys</em>, <em>haloID_field='ID'</em>, <em>forestID_field='ForestID'</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.common.get_halos_per_forest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determines the number of halos in each forest.</p>
+<p>The resulting Dictionary is nested with the outer-key given by the ForestID
+and the inner-key given by the snapshot field name.</p>
+<dl class="docutils">
+<dt>E.g., If forest 5 has 10 halos at Snapshot 20 and 100 at Snapshot 21 then,</dt>
+<dd>NHalos_forest[5][‘Snap_020’] = 10
+NHalos_forest[5][‘Snap_021’] = 100</dd>
+</dl>
+<p>We also generate the offset for each Forest at each snapshot.  This is
+necessary because whilst Forest 5 may saved first at snapshot 20, it isn’t
+necessarily saved first at snapshot 21.</p>
+<dl class="docutils">
+<dt>..note::</dt>
+<dd>The default parameters are chosen to match the ASTRO3D Genesis trees as
+produced by VELOCIraptor + Treefrog.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>f_in</strong> (<em>Open HDF5 file. Required.</em>) – HDF5 file that contains the sorted trees.</li>
+<li><strong>Snap_Keys</strong> (<em>List of strings. Required.</em>) – List of keys that correspond to the fields containing the snapshot
+data.</li>
+<li><strong>haloID_field</strong> (<em>String. Default: 'ID'.</em>) – Field name within the HDF5 file that corresponds to the unique halo ID.</li>
+<li><strong>forestID_field</strong> (<em>String. Default: 'ForestID'.</em>) – Field name within the HDF5 file that corresponds to forest ID.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>NHalos_forest</strong> (<em>Nested Dictionary. Required.</em>) – Nested dictionary that contains the number of halos for each Forest at
+each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
+key.</li>
+<li><strong>NHalos_forest_offset</strong> (<em>Nested Dictionary. Required.</em>) – Nested dictionary that contains the offset for each Forest at each
+snapshot. Outer-key is the ForestID and inner-key is the snapshot key.
+This is required because whilst the tree is sorted by ForestID, the
+relative position of the tree can change from snapshot to snapshot.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="astro3D.genesis.utils.common.get_snapkeys_and_nums">
+<code class="descclassname">astro3D.genesis.utils.common.</code><code class="descname">get_snapkeys_and_nums</code><span class="sig-paren">(</span><em>file_keys</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.common.get_snapkeys_and_nums" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets names of snapshot keys and snapshot numbers.</p>
+<p>We assume that the snapshot data keys are named to include the word
+“snap” (case insensitive). We also assume that the snapshot number
+for each snapshot key will be in a single cluster towards the end
+of the key. If this is not the case we issue a warning showing what
+we believe to be the corresponding snapshot number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file_keys</strong> (<em>Keys.</em>) – Keys from a given file or dataset.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>Snap_Keys</strong> (<em>List of strings.</em>) – Names of the snapshot keys within the passed keys.</li>
+<li><strong>Snap_Num</strong> (<em>Dictionary of integers keyed by Snap_Keys.</em>) – Snapshot number of each snapshot key.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="astro3D.genesis.utils.common.index_to_temporalID">
+<code class="descclassname">astro3D.genesis.utils.common.</code><code class="descname">index_to_temporalID</code><span class="sig-paren">(</span><em>index</em>, <em>snapnum</em>, <em>index_mult_factor</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.common.index_to_temporalID" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><p>Takes snapshot-local halo index and converts into temporally unique ID.</p>
+<p>Note: IDs start counting at 1.  So the index 0 gets mapped to an ID of 1.</p>
+<dl class="docutils">
+<dt>index: array-like of integers, or integer. Required.</dt>
+<dd>Array or single value that describes the snapshot-local haloID.</dd>
+<dt>snapnum: integer.  Required</dt>
+<dd>Snapshot that the halo/s are/is located at.</dd>
+<dt>index_mult_factor: integer. Required</dt>
+<dd>Factor to convert a the snapshot-unique halo index to a temporally
+unique halo ID.</dd>
+</dl>
+<dl class="docutils">
+<dt>index: array-like of integers, or integer. Required.</dt>
+<dd>Array or single value that contains the temporally unique haloID.</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">index_to_temporalID</span><span class="p">(</span><span class="mi">23</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mf">1e12</span><span class="p">)</span>
+<span class="go">18000000000024</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>#    &gt;&gt;&gt; test_list = [25, 100, 4]
+#    &gt;&gt;&gt; test_snapnums = [23, 12, 60]
+#    &gt;&gt;&gt; index_to_temporalID(test_list, test_snapnums, 1e12)</p>
+<blockquote>
+<div>[2300000026, 1200000101, 600000005]</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="astro3D.genesis.utils.common.snap_key_to_snapnum">
+<code class="descclassname">astro3D.genesis.utils.common.</code><code class="descname">snap_key_to_snapnum</code><span class="sig-paren">(</span><em>snap_key</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.common.snap_key_to_snapnum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given the name of a snapshot key, finds the associated snapshot number.</p>
+<p>This is necessary because the 0th snapshot key may not be snapshot 000 and
+there could be missing snapshots. This function searches backwards for a
+group of digits that identify the snapshot number.  If there are numbers
+outside of this cluster they will be disregarded and a warning raised.</p>
+<p>For example, if the key is “Snap1_030”, the function will return 30 and
+issue a warning that there were digits ignored.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>snap_key</strong> (<em>String.  Required.</em>) – The name of the snapshot key.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>snapnum</strong> – The snapshot number that corresponds to the snapshot key.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Integer.  Required.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">snap_key_to_snapnum</span><span class="p">(</span><span class="s1">&#39;Snap_018&#39;</span><span class="p">)</span>
+<span class="go">18</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">snap_key_to_snapnum</span><span class="p">(</span><span class="s1">&#39;018_Snap&#39;</span><span class="p">)</span>
+<span class="go">18</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">snap_key_to_snapnum</span><span class="p">(</span><span class="s1">&#39;Sn3p_018&#39;</span><span class="p">)</span>
+<span class="go">--WARNING--</span>
+<span class="go">For Snapshot key &#39;Sn3p_018&#39; there were numbers that were not clustered together at the end of the key.</span>
+<span class="go">We assume the snapshot number corresponding to this key is 18; please check that this is correct.</span>
+<span class="go">18</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="astro3D.genesis.utils.common.temporalID_to_snapnum">
+<code class="descclassname">astro3D.genesis.utils.common.</code><code class="descname">temporalID_to_snapnum</code><span class="sig-paren">(</span><em>temporalID</em>, <em>index_mult_factor</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.common.temporalID_to_snapnum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a temporalID, return the corresponding snapshot number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>ID</strong> (<em>array-like of integers</em><em>, or </em><em>integer. Required.</em>) – Array or single value that describes the temporalID/s.</li>
+<li><strong>index_mult_factor</strong> (<em>integer. Required.</em>) – Factor to convert to from temporally-unique halo ID to snap-shot unique
+halo index.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>snapnum</strong> – Array or single value that contains the snapshot number corresponding
+to the temporal ID.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array-like of integers, or integer. Required.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">temporalID_to_snapnum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1e12</span><span class="p">)</span>
+<span class="go">0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">temporalID_to_snapnum</span><span class="p">(</span><span class="mi">18000000000001</span><span class="p">,</span> <span class="mf">1e12</span><span class="p">)</span>
+<span class="go">18</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">test_list</span> <span class="o">=</span> <span class="p">[</span><span class="mi">18000000000001</span><span class="p">,</span> <span class="mi">20000000000050</span><span class="p">,</span> <span class="mi">134000000000005</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">temporalID_to_snapnum</span><span class="p">(</span><span class="n">test_list</span><span class="p">,</span> <span class="mf">1e12</span><span class="p">)</span>
+<span class="go">array([ 18,  20, 134])</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">test_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">20000000000050</span><span class="p">,</span> <span class="mi">134000000000005</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">temporalID_to_snapnum</span><span class="p">(</span><span class="n">test_array</span><span class="p">,</span> <span class="mf">1e12</span><span class="p">)</span>
+<span class="go">array([ 20, 134])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-astro3D.genesis.utils.convert_indices">
+<span id="astro3d-genesis-utils-convert-indices-module"></span><h2>astro3D.genesis.utils.convert_indices module<a class="headerlink" href="#module-astro3D.genesis.utils.convert_indices" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="astro3D.genesis.utils.convert_indices.convert_indices">
+<code class="descclassname">astro3D.genesis.utils.convert_indices.</code><code class="descname">convert_indices</code><span class="sig-paren">(</span><em>fname_in, fname_out, haloID_field='ID', forestID_field='ForestID', ID_fields=['Head', 'Tail', 'RootHead', 'RootTail', 'ID', 'hostHaloID'], index_mult_factor=1000000000000.0</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.convert_indices.convert_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts temporally unique tree IDs to ones that are forest-local as
+required by the LHalo Trees format.</p>
+<p>The data-structure of the Treefrog trees is assumed to be HDF5 File -&gt;
+Snapshots -&gt; Halo Properties at each snapshot.</p>
+<p>A new HDF5 file is saved out with the updated IDs.</p>
+<dl class="docutils">
+<dt>..note::</dt>
+<dd>We require the input trees to be sorted via the forest ID
+(<cite>forestID_field</cite>) and suggest to also sub-sort on hostHaloID and mass.
+Sorting can be done using the <cite>forest_sorter()</cite> function.</dd>
+<dt>..note::</dt>
+<dd>The default parameters are chosen to match the ASTRO3D Genesis trees as
+produced by VELOCIraptor + Treefrog.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fname_out</strong> (<em>fname_in</em><em>,</em>) – Path to the input HDF5 VELOCIraptor + treefrog trees and the path
+where the LHalo correct trees will be saved.</li>
+<li><strong>haloID_field</strong> (<em>String. Default: 'ID'.</em>) – Field name within the HDF5 file that corresponds to the unique halo ID.</li>
+<li><strong>forestID_field</strong> (<em>String. Default: 'ForestID'.</em>) – Field name within the HDF5 file that corresponds to forest ID.</li>
+<li><strong>ID_fields</strong> (<em>List of string. Default:</em><em> [</em><em>'Head'</em><em>, </em><em>'Tail'</em><em>, </em><em>'RootHead'</em><em>, </em><em>'RootTail'</em><em>,</em>) – ‘ID’, ‘hostHaloID’].
+The HDF5 field names that correspond to properties that use halo IDs.
+As the halo IDs are updated to match the required LHalo Tree format,
+these must also be updated.</li>
+<li><strong>index_mult_factor</strong> (<em>Integer. Default: 1e12.</em>) – Multiplication factor to generate a temporally unique halo ID. See
+<cite>common.index_to_temporalID()</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-astro3D.genesis.utils.forest_sorter">
+<span id="astro3d-genesis-utils-forest-sorter-module"></span><h2>astro3D.genesis.utils.forest_sorter module<a class="headerlink" href="#module-astro3D.genesis.utils.forest_sorter" title="Permalink to this headline">¶</a></h2>
+<p>Authors: Jacob Seiler, Manodeep Sinha</p>
+<dl class="function">
+<dt id="astro3D.genesis.utils.forest_sorter.forest_sorter">
+<code class="descclassname">astro3D.genesis.utils.forest_sorter.</code><code class="descname">forest_sorter</code><span class="sig-paren">(</span><em>fname_in, fname_out, haloID_field='ID', sort_fields=['ForestID', 'hostHaloID', 'Mass_200mean'], sort_direction=array([ 1,  1, -1]), ID_fields=['Head', 'Tail', 'RootHead', 'RootTail', 'ID', 'hostHaloID'], index_mult_factor=1000000000000.0</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.forest_sorter.forest_sorter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sorts and saves a HDF5 tree file on the specified sort fields.  The IDs of
+the halos are assume to use the index within the data file and hence will
+be updated to reflect the sorted order.</p>
+<dl class="docutils">
+<dt>..note::</dt>
+<dd>The default parameters are chosen to match the ASTRO3D Genesis trees as
+produced by VELOCIraptor + Treefrog.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fname_out</strong> (<em>fname_in</em><em>,</em>) – Path to the input HDF5 trees and path to where the sorted trees will be
+saved.</li>
+<li><strong>haloID_field</strong> (<em>String. Default: 'ID'.</em>) – Field name within the HDF5 file that corresponds to the unique halo ID.</li>
+<li><strong>sort_fields</strong> (<em>List of strings. Default:</em><em> [</em><em>'ForestID'</em><em>, </em><em>'hostHaloID'</em><em>,</em>) – ‘Mass_200mean’].
+The HDF5 field names that the sorting will be performed on. The entries
+are ordered such that the first field will be the outer-most sort and
+the last field will be the inner-most sort.</li>
+<li><strong>ID_fields</strong> (<em>List of string. Default:</em><em> [</em><em>'Head'</em><em>, </em><em>'Tail'</em><em>, </em><em>'RootHead'</em><em>, </em><em>'RootTail'</em><em>,</em>) – ‘ID’, ‘hostHaloID’].
+The HDF5 field names that correspond to properties that use halo IDs.
+As the halo IDs are updated to reflect the new sort order, these fields
+must also be updated.</li>
+<li><strong>index_mult_factor</strong> (<em>Integer. Default: 1e12.</em>) – Multiplication factor to generate a temporally unique halo ID. See
+<cite>common.index_to_temporalID()</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-astro3D.genesis.utils.treefrog_to_lhalo">
+<span id="astro3d-genesis-utils-treefrog-to-lhalo-module"></span><h2>astro3D.genesis.utils.treefrog_to_lhalo module<a class="headerlink" href="#module-astro3D.genesis.utils.treefrog_to_lhalo" title="Permalink to this headline">¶</a></h2>
+<p>Authors: Jacob Seiler, Manodeep Sinha</p>
+<dl class="function">
+<dt id="astro3D.genesis.utils.treefrog_to_lhalo.treefrog_to_lhalo">
+<code class="descclassname">astro3D.genesis.utils.treefrog_to_lhalo.</code><code class="descname">treefrog_to_lhalo</code><span class="sig-paren">(</span><em>fname_in</em>, <em>fname_out</em>, <em>haloID_field='ID'</em>, <em>forestID_field='ForestID'</em><span class="sig-paren">)</span><a class="headerlink" href="#astro3D.genesis.utils.treefrog_to_lhalo.treefrog_to_lhalo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes the Treefrog trees that have had their IDs corrected to be in LHalo
+format and saves them in LHalo binary format.</p>
+<p>The data-structure of the Treefrog trees is assumed to be HDF5 File -&gt;
+Snapshots -&gt; Halo Properties at each snapshot.</p>
+<dl class="docutils">
+<dt>..note::</dt>
+<dd><p class="first">We require the input trees to be sorted via the forest ID
+(<cite>forestID_field</cite>) and suggest to also sub-sort on hostHaloID and mass.
+Sorting can be done using the <cite>forest_sorter()</cite> function.</p>
+<p class="last">We also require the input trees to have IDs that are LHalo compatible;
+that is, they are forest local.</p>
+</dd>
+<dt>..note::</dt>
+<dd>The default parameters are chosen to match the ASTRO3D Genesis trees as
+produced by VELOCIraptor + Treefrog.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fname_out</strong> (<em>fname_in</em><em>,</em>) – Path to the input HDF5 VELOCIraptor + treefrog trees and the path
+where the LHalo binary file will be saved.</li>
+<li><strong>haloID_field</strong> (<em>String. Default: 'ID'.</em>) – Field name within the HDF5 file that corresponds to the unique halo ID.</li>
+<li><strong>forestID_field</strong> (<em>String. Default: 'ForestID'.</em>) – Field name within the HDF5 file that corresponds to forest ID.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">astro3D.genesis.utils package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-astro3D.genesis.utils.common">astro3D.genesis.utils.common module</a></li>
+<li><a class="reference internal" href="#module-astro3D.genesis.utils.convert_indices">astro3D.genesis.utils.convert_indices module</a></li>
+<li><a class="reference internal" href="#module-astro3D.genesis.utils.forest_sorter">astro3D.genesis.utils.forest_sorter module</a></li>
+<li><a class="reference internal" href="#module-astro3D.genesis.utils.treefrog_to_lhalo">astro3D.genesis.utils.treefrog_to_lhalo module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="astro3D.genesis.html"
+                        title="previous chapter">astro3D.genesis package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/astro3D.genesis.utils.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="astro3D.genesis.html" title="astro3D.genesis package"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">genesis  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="astro3D.html" >astro3D package</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="astro3D.genesis.html" >astro3D.genesis package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Jacob Seiler, Manodeep Sinha.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.6.
+    </div>
+  </body>
+</html>
