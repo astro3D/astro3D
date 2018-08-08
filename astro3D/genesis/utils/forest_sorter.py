@@ -10,7 +10,7 @@ import h5py
 from tqdm import tqdm
 import time
 
-__all__ = ("get_sort_indices", "forest_sorter", )
+__all__ = ("forest_sorter", )
 
 
 def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
