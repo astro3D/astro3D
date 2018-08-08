@@ -32,9 +32,9 @@ def find_version(*file_paths):
 def setup_packages():
     pkgname = "astro3D"
     version = find_version(pkgname, "__init__.py")
-    author = "Manodeep Sinha"
+    author = "Manodeep Sinha, Jacob Seiler"
     author_email = "manodeep@gmail.com"
-    base_url = "https://github.com/manodeep/genesis"
+    base_url = "https://github.com/manodeep/astro3D"
 
     metadata = dict(
         name=pkgname,
