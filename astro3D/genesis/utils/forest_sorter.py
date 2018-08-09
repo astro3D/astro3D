@@ -39,6 +39,10 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
             the outer-most sort and the last key will perform the inner-most
             sort.
 
+    sort_direction : List of integers, optional
+        Specifies the direction in which the sorting will occur for each
+        ``sort_field`` entry. 1 corresponds to ascending, -1 to descending.
+
     Returns
     ----------
 
@@ -58,7 +62,7 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
 
     sort_keys = []
 
-    # We need to reverse `sort_fields` due to the behaviour of `~np.lexsort`.
+    # We need to reverse ``sort_fields`` due to the behaviour of ``numpy.lexsort``.
     for key, direction in zip(reversed(sort_fields), reversed(sort_direction)):
         if key is None or "NONE" in key.upper():
             continue
@@ -74,7 +78,7 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
 
 def forest_sorter(fname_in, fname_out, haloID_field="ID",
                   sort_fields=["ForestID", "hostHaloID", "Mass_200mean"],
-                  sort_direction=np.array([1, 1, -1]),
+                  sort_direction=[1, 1, -1],
                   ID_fields=["Head", "Tail", "RootHead", "RootTail",
                              "ID", "hostHaloID"], index_mult_factor=int(1e12)):
     """
@@ -96,6 +100,10 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
         The HDF5 field names that the sorting will be performed on. The entries
         are ordered such that the first field will be the outer-most sort and
         the last field will be the inner-most sort.
+
+    sort_direction : List of integers, optional
+        Specifies the direction in which the sorting will occur for each
+        ``sort_field`` entry. 1 corresponds to ascending, -1 to descending.
 
     ID_fields : List of strings, optional
         The HDF5 field names that correspond to properties that use halo IDs.

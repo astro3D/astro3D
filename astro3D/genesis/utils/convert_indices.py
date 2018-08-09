@@ -23,8 +23,8 @@ def convert_indices(fname_in, fname_out,
 
     .. note::
         We require the input trees to be sorted via the forest ID
-        (``forestID_field``) and suggest to also sub-sort on hostHaloID and mass.
-        Sorting can be done using :py:mod:`astro3D.genesis.utils.forest_sorter`.
+        (``forestID_field``) and suggest to also sub-sort on ``hostHaloID`` and
+        mass. Sorting can be done using :py:mod:`astro3D.genesis.utils.forest_sorter`.
 
     Parameters
     ----------
