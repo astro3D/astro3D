@@ -24,17 +24,6 @@ def get_LHalo_datastruct():
     """
     Generates the LHalo numpy structured array.
 
-    .. note::
-        Ideally an LHalo tree would specify properties such as
-        position/velocity/spin as a single Nx3 array.  However due to the
-        way `~h5py` indexes its elements, slicing the input data in such a way
-        is not possible. Instead we have used individual 1D arrays which when 
-        read by a binary reader will correctly correspond to an Nx3 array.
-
-    .. note::
-        If you specify a HDF5 file to be written, the resulting file will
-        contain position/velocity/spin as single Nx3 arrays. 
-
     Parameters
     ----------
 
@@ -48,7 +37,19 @@ def get_LHalo_datastruct():
 
     mutltipledim_names: Dictionary of lists.
         Specifies the field names for multi-dimensional arrays and the 1D LHalo 
-        components. 
+        components.
+
+    Notes 
+    ----------
+
+    Ideally an LHalo tree would specify properties such as position as a single
+    Nx3 array. However due to the way ``h5py`` indexes its elements, slicing
+    the input data in such a way is not possible. Instead we have used
+    individual 1D arrays which when read by a binary reader will correctly
+    correspond to an Nx3 array.
+
+    If you specify a HDF5 file to be written, the resulting file will contains
+    positions/velocity/spin as single Nx3 arrays.
     """
 
     LHalo_Desc_full = [
@@ -99,7 +100,7 @@ def fix_nextprog(forest_halos):
     ----------
 
     forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`. 
         The halos within a single forest.
 
     Returns
@@ -281,7 +282,8 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
     .. note::
         We require the input trees to be sorted via the forest ID
         (`forestID_field`) and suggest to also sub-sort on hostHaloID and mass.
-        Sorting can be done using the `forest_sorter()` function.
+        Sorting can be done using
+        :py:mod:`astro3D.genesis.utils.forest_sorter.forest_sorter`. 
 
         We also require the input trees to have IDs that are LHalo compatible;
         that is, they are forest local.
