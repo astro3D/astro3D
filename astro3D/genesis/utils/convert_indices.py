@@ -23,7 +23,7 @@ def convert_indices(fname_in, fname_out,
 
     .. note::
         We require the input trees to be sorted via the forest ID
-        (`forestID_field`) and suggest to also sub-sort on hostHaloID and mass.
+        (``forestID_field``) and suggest to also sub-sort on hostHaloID and mass.
         Sorting can be done using the `forest_sorter()` function.
 
     .. note::
