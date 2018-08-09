@@ -4,10 +4,6 @@ from __future__ import print_function
 
 __all__ = ()
 
-#__all__ = ("snap_key_to_snapnum", "index_to_temporalID",
-#           "temporalID_to_snapnum", "get_snapkeys_and_nums", 
-#           "copy_group", "get_halos_per_forest", "search_dict_of_lists", )
-
 
 def snap_key_to_snapnum(snap_key):
     """

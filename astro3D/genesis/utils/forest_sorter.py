@@ -24,14 +24,14 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     Parameters
     ----------
 
-    file_in: HDF5 file.
+    file_in : HDF5 file
         Open HDF5 file that we are sorting for. The data structure is assumed
         to be HDF5_File -> Snapshot_Keys -> Halo properties.
 
-    snap_key: String.
+    snap_key : String
         The snapshot field name for the snapshot we are accessing.
 
-    sort_fields: List of strings.
+    sort_fields : List of strings
         List containing the field names we are sorting on.
 
         .. note::
@@ -42,7 +42,7 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
     Returns
     ----------
 
-    indices: `~numpy.ndarray` of integers.
+    indices: Numpy array of integers
         Array containing the indices that sorts the data using the specified
         sort keys.
 
@@ -82,14 +82,10 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
     the halos are assume to use the index within the data file and hence will
     be updated to reflect the sorted order.
 
-    .. note::
-        The default parameters are chosen to match the ASTRO3D Genesis trees as
-        produced by VELOCIraptor + Treefrog.
-
     Parameters
     ----------
 
-    fname_in, fname_out : String.
+    fname_in, fname_out : String
         Path to the input HDF5 trees and path to where the sorted trees will be
         saved.
 
@@ -107,13 +103,18 @@ def forest_sorter(fname_in, fname_out, haloID_field="ID",
         must also be updated.
 
     index_mult_factor: Integer, optional
-        Multiplication factor to generate a temporally unique halo ID. See
-        `common.index_to_temporalID()`.
+        Multiplication factor to generate a temporally unique halo ID.
 
     Returns
     ----------
 
     None.
+
+    Notes
+    ----------
+
+    The default parameters are chosen to match the ASTRO3D Genesis trees as
+    produced by VELOCIraptor + Treefrog.
     """
 
     print("")

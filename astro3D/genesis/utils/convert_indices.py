@@ -24,16 +24,12 @@ def convert_indices(fname_in, fname_out,
     .. note::
         We require the input trees to be sorted via the forest ID
         (``forestID_field``) and suggest to also sub-sort on hostHaloID and mass.
-        Sorting can be done using the `forest_sorter()` function.
-
-    .. note::
-        The default parameters are chosen to match the ASTRO3D Genesis trees as
-        produced by VELOCIraptor + Treefrog.
+        Sorting can be done using :py:mod:`astro3D.genesis.utils.forest_sorter`.
 
     Parameters
     ----------
 
-    fname_in, fname_out : String.
+    fname_in, fname_out : String
         Path to the input HDF5 VELOCIraptor + treefrog trees and the path
         where the LHalo correct trees will be saved.
 
@@ -49,13 +45,18 @@ def convert_indices(fname_in, fname_out,
         these must also be updated.
 
     index_mult_factor : Integer, optional
-        Multiplication factor to generate a temporally unique halo ID. See
-        `common.index_to_temporalID()`.
+        Multiplication factor to generate a temporally unique halo ID.
 
     Returns
     ----------
 
     None.
+
+    Notes
+    ----------
+
+    The default parameters are chosen to match the ASTRO3D Genesis trees as
+    produced by VELOCIraptor + Treefrog.
     """
 
     print("")

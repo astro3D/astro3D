@@ -32,14 +32,14 @@ def get_LHalo_datastruct():
     Returns
     ----------
 
-    LHalo_Desc: numpy structured array.
+    LHalo_Desc : Numpy structured array.
         Structured array for the LHaloTree data format.
 
-    mutltipledim_names: Dictionary of lists.
-        Specifies the field names for multi-dimensional arrays and the 1D LHalo 
+    mutltipledim_names : Dictionary of lists.
+        Specifies the field names for multi-dimensional arrays and the 1D LHalo
         components.
 
-    Notes 
+    Notes
     ----------
 
     Ideally an LHalo tree would specify properties such as position as a single
@@ -85,8 +85,8 @@ def get_LHalo_datastruct():
     LHalo_Desc = np.dtype({'names': names, 'formats': formats}, align=True)
 
     multipledim_names = {"Pos": ["Posx", "Posy", "Posz"],
-                         "Vel" : ["Velx", "Vely", "Velz"],
-                         "Spin" : ["Spinx", "Spiny", "Spinz"]}
+                         "Vel": ["Velx", "Vely", "Velz"],
+                         "Spin": ["Spinx", "Spiny", "Spinz"]}
 
     return LHalo_Desc, multipledim_names
 
@@ -99,16 +99,16 @@ def fix_nextprog(forest_halos):
     Parameters
     ----------
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`. 
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
         The halos within a single forest.
 
     Returns
     ----------
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
-        The forest halos with updated `NextProgenitor` field.
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
+        The forest halos with updated ``NextProgenitor`` field.
     """
 
     all_descendants = forest_halos["Descendant"][:]
@@ -139,7 +139,7 @@ def fix_flybys(forest_halos, NHalos_root):
 
     We designate the most massive FoF halo at the root redshift to be the
     'True' FoF halo and update the Treefrog-equivalent field of
-    `FirstHaloInFOFgroup` to point to this most massive halo.
+    ``FirstHaloInFOFgroup`` to point to this most massive halo.
 
     .. note::
         We pass all halos within the forest to this function but only those at
@@ -148,8 +148,8 @@ def fix_flybys(forest_halos, NHalos_root):
     Parameters
     ----------
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
+    forest_halos: Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
         The halos within a single forest.
 
     NHalos_root: Integer.
@@ -158,16 +158,16 @@ def fix_flybys(forest_halos, NHalos_root):
     Returns
     ----------
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
-        The forest halos with updated `FirstHaloInFOFgroup` and
-        `NextHaloInFOFgroup` fields.
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
+        The forest halos with updated ``FirstHaloInFOFgroup`` and
+        ``NextHaloInFOFgroup`` fields.
 
-    global_true_fof_idx: Integer.
+    global_true_fof_idx : Integer.
         The forest-local index corresponding to the 'true' FoF halo for this
         forest.
 
-    global_flyby_ind: List of integers.
+    global_flyby_ind : List of integers.
         The forest-local indices corresponding to those FoF halos that were
         flagged as flybys.
     """
@@ -198,7 +198,7 @@ def fix_flybys(forest_halos, NHalos_root):
 
 def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
     """
-    Fixes the `NextHaloInFOFgroup` field for a single forest at a single
+    Fixes the ``NextHaloInFOFgroup`` field for a single forest at a single
     snapshot.
 
     .. note::
@@ -208,26 +208,26 @@ def fix_nextsubhalo(forest_halos, fof_groups, offset, NHalos):
     Parameters
     ----------
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
         The halos within a single forest.
 
-    fof_groups: List of integers.
+    fof_groups : List of integers.
         The FoF IDs for the halos being updated.  Necessary as we pass the
         entire forest.
 
-    offset: Integer.
+    offset : Integer.
         The (global) offset for the halos within the snapshot we're updating.
 
-    NHalos: Integer.
+    NHalos : Integer.
         The number of halos being updated.
 
     Returns
     ----------
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
-        The forest halos with updated `NextHaloInFOFgroup` field.
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
+        The forest halos with updated ``NextHaloInFOFgroup`` field.
 
     Returns
     ----------
@@ -281,16 +281,11 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
     .. note::
         We require the input trees to be sorted via the forest ID
-        (`forestID_field`) and suggest to also sub-sort on hostHaloID and mass.
-        Sorting can be done using
-        :py:mod:`astro3D.genesis.utils.forest_sorter.forest_sorter`. 
+        (``forestID_field``) and suggest to also sub-sort on hostHaloID and mass.
+        Sorting can be done using :py:mod:`astro3D.genesis.utils.forest_sorter`.
 
-        We also require the input trees to have IDs that are LHalo compatible;
-        that is, they are forest local.
-
-    .. note::
-        The default parameters are chosen to match the ASTRO3D Genesis trees as
-        produced by VELOCIraptor + Treefrog.
+        We also require the input trees to have IDs that are LHalo compatible.
+        See :py:mod:`astro3D.genesis.utils.convert_indices`.
 
     Parameters
     ----------
@@ -306,11 +301,11 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         Field name within the HDF5 file that corresponds to forest ID.
 
     Nforests : Integer, optional
-        The number of forests to be processed. If `None` is passed then all
+        The number of forests to be processed. If ``None`` is passed then all
         forests are processed.
 
     write_binary_flag : Integer, optional
-        Flag to decide whether to write to a binary or HDF5 file.  
+        Flag to decide whether to write to a binary or HDF5 file.
         0: HDF5 file only.
         1: Binary file only.
         2: Both binary and HDF5 file.
@@ -319,6 +314,12 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
     ----------
 
     None.
+
+    Notes
+    ----------
+
+    The default parameters are chosen to match the ASTRO3D Genesis trees as
+    produced by VELOCIraptor + Treefrog.
     """
 
     if rank == 0:
@@ -400,7 +401,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
         if write_binary_flag == 1 or write_binary_flag == 2:
             f_out = open(my_fname_out, "ab")
         else:
-            f_out = h5py.File(my_fname_out, "a") 
+            f_out = h5py.File(my_fname_out, "a")
 
         for count, forestID in enumerate(forests_to_process):
             if count % 500 == 0:
@@ -471,7 +472,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
                     if not cmn.search_dict_of_lists(subgroup_name, multipledim_names):
                         f_out[group_name][subgroup_name] = forest_halos[subgroup_name]
 
-                # Then go through all the multi-dimensional arrays and save 
+                # Then go through all the multi-dimensional arrays and save
                 # an Nx3 array that contains all the data.
                 for name in multipledim_names:
 
@@ -481,10 +482,10 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
 
                     # Then populate that array.
                     for dim, dim_name in enumerate(multipledim_names[name]):
-                        array[:, dim] = forest_halos[dim_name] 
+                        array[:, dim] = forest_halos[dim_name]
 
                     # Finally save it.
-                    f_out[group_name][name] = array 
+                    f_out[group_name][name] = array
 
         # End of Forests Loop.
 
@@ -499,7 +500,7 @@ def treefrog_to_lhalo(fname_in, fname_out, haloID_field="ID",
     # If the user set `write_binary_flag == 2`, then convert the binary file to
     # a HDF5 one.
 
-    if write_binary_flag == 2: 
+    if write_binary_flag == 2:
         hdf5_fname_out = "{0}.{1}.hdf5".format(fname_out, rank)
         convert_binary_to_hdf5(my_fname_out, hdf5_fname_out)
         print("Binary file also converted to HDF5.")
@@ -517,18 +518,18 @@ def determine_forests(NHalos_forest, all_forests):
     Parameters
     ----------
 
-    NHalos_forest: Nested Dictionary.
+    NHalos_forest : Nested Dictionary.
         Nested dictionary that contains the number of halos for each Forest at
         each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
         key.
 
-    all_forests: List of integers.
+    all_forests : List of integers.
         List of Forest IDs to be processed across all files.
 
     Returns
     ----------
 
-    my_forest_assignment: List of integers.
+    my_forest_assignment : List of integers.
         Rank-unique list of forest IDs to be processed by this rank.
     """
 
@@ -580,30 +581,25 @@ def determine_forests(NHalos_forest, all_forests):
 def write_header(fname_out, Nforests, totNHalos, halos_per_forest,
                  write_binary_flag):
     """
-    Creates the LHalo Tree binary file and writes the header information. This
-    is of the form:
-
-    Number of Forests within this file (Nforests): 4-byte integer.
-    Total number of halos within this file: 4-byte integer.
-    Number of halos within each forest for this file: Nforests*4-bytes integers
+    Creates the LHalo Tree file and writes the header information.
 
     Parameters
     ----------
 
-    fname_out: String.
+    fname_out : String.
         Path to where the LHalo tree binary will be saved.
 
-    Nforest: Integer.
+    Nforest : Integer.
         Number of forests that will be saved in this file.
 
-    totNHalos: Integer.
+    totNHalos : Integer.
         Total number of halos that will be saved in this file.
 
-    halos_per_forest: List of integers.
+    halos_per_forest : List of integers.
         The number of halos within each forest that will be saved in this file.
 
-    write_binary_flag: Integer.
-        Flag to decide whether to write to a binary or HDF5 file.  
+    write_binary_flag : Integer.
+        Flag to decide whether to write to a binary or HDF5 file.
         0: HDF5 file only.
         1: Binary file only.
         2: Both binary and HDF5 file.
@@ -612,6 +608,15 @@ def write_header(fname_out, Nforests, totNHalos, halos_per_forest,
     ----------
 
     None.
+
+    Notes
+    ----------
+
+    The header has the following data structure:
+
+        Number of Forests within this file (Nforests): 4-byte integer.
+        Total number of halos within this file: 4-byte integer.
+        Number of halos within each forest for this file: Nforests*4-bytes integers
     """
 
     if write_binary_flag == 1 or write_binary_flag == 2:
@@ -626,10 +631,10 @@ def write_header(fname_out, Nforests, totNHalos, halos_per_forest,
         with h5py.File(fname_out, "w") as f_out:
             f_out.create_group("Header")
             f_out["Header"].attrs.create("Ntrees", Nforests, dtype=np.int32)
-            f_out["Header"].attrs.create("totNHalos", totNHalos, 
-                                             dtype=np.int32)
-            f_out["Header"].attrs.create("TreeNHalos", halos_per_forest, 
-                                             dtype=np.int32)
+            f_out["Header"].attrs.create("totNHalos", totNHalos,
+                                         dtype=np.int32)
+            f_out["Header"].attrs.create("TreeNHalos", halos_per_forest,
+                                         dtype=np.int32)
 
     return
 
@@ -637,48 +642,48 @@ def write_header(fname_out, Nforests, totNHalos, halos_per_forest,
 def populate_forest(f_in, forest_halos, Snap_Keys, Snap_Nums, forestID,
                     NHalos_forest, NHalos_forest_offset, filenr, hubble_h):
     """
-    Takes an empty `forest_halos` structure and fills it with the halos
-    corresponding to the passed `forestID`.
+    Takes an empty ``forest_halos`` structure and fills it with the halos
+    corresponding to the passed ``forestID``.
 
     Parameters
     ----------
 
-    f_in: Open HDF5 file.
+    f_in : Open HDF5 file.
         The open HDF5 tree file we're reading from.
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
         Data structure to hold all the halos in this forest.  Has been
         initalized to zeros with enough length to hold all halos within this
         forest.
 
-    Snap_Keys: List of strings.
+    Snap_Keys : List of strings.
         List of keys that correspond to the fields containing the snapshot
         data.
 
-    Snap_Nums: Dictionary of integers keyed by `Snap_Keys`.
+    Snap_Nums : Dictionary of integers keyed by ``Snap_Keys``.
         Snapshot number of each snapshot key.
 
-    forestID: Integer.
+    forestID : Integer.
         The forest ID we're populating the halos for.
 
-    NHalos_forest: Nested Dictionary.
+    NHalos_forest : Nested Dictionary.
         Nested dictionary that contains the number of halos for each Forest at
-        each snapshot.  Outer-key is the ForestID and inner-key is the snapshot
+        each snapshot.  Outer-key is ``forestID`` and inner-key is the snapshot
         key.
 
-    NHalos_forest_offset: Nested Dictionary. Required.
+    NHalos_forest_offset : Nested Dictionary. Required.
         Nested dictionary that contains the offset for each Forest at each
-        snapshot. Outer-key is the ForestID and inner-key is the snapshot key.
+        snapshot. Outer-key is ``forestID`` and inner-key is the snapshot key.
 
-    filenr: Integer.
+    filenr : Integer.
         The output file number this tree will be written to.
 
     Returns
     ----------
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
         The filled data structure with the halos for the forest.
     """
     halos_offset = 0  # We need to slice the halos into the forest array in the
@@ -715,42 +720,39 @@ def fill_LHalo_properties(f_in, forest_halos, halo_indices, current_offset,
     Grabs all the properties from the input HDF5 file for the current snapshot.
 
     .. note::
-        The passed parameter `f_in` should correspond to the **snapshot group**
+        The passed parameter ``f_in`` should correspond to the snapshot group
         that contains the halo properties datasets.  E.g., if we are filling
-        the halos for Snapshot 43 with key `Snap_043`, this function should be
-        called with `f_in[Snap_043]`.
+        the halos for Snapshot 43 with key ``Snap_043``, this function should be
+        called with ``f_in['Snap_043']``.
 
     Parameters
     ----------
 
     f_in: Open HDF5 file.
-        The **snapshot level** HDF5 group that we're reading from.
+        The snapshot level HDF5 group that we're reading from.
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
         Data structure to hold all the halos for this forest.
 
-        .. note::
-            We pass the entire forest array here but only update a slice of it.
-
-    halo_indices: List of integers.
+    halo_indices : List of integers.
         List of indices that correspond to the halos we're filling for this
         snapshot.
 
-    current_offset: Integer.
-        The index into the `forest_halo` structure where this snapshot starts.
+    current_offset : Integer.
+        The index into the ``forest_halo`` structure where this snapshot starts.
 
-    snap_num: Integer.
+    snap_num : Integer.
         The snapshot number we're filling for.
 
-    filenr: Integer.
+    filenr : Integer.
         The output file number this tree will be written to.
 
     Returns
     ----------
 
-    forest_halos: `~np.ndarray` with data structure defined by
-                  `get_LHalo_datastruct()`
+    forest_halos : Numpy structured array with data structure defined by
+                  :py:mod:`astro3D.genesis.utils.treefrog_to_lhalo.get_LHalo_datastruct`
         The filled data structure with the halos for the forest.
     """
 
@@ -822,13 +824,10 @@ def convert_binary_to_hdf5(fname_in, fname_out):
     """
     Converts a binary LHalo Tree file to HDF5 format.
 
-    .. note::
-        Multi-dimensional arrays (e.g., 'Position') are saved as Nx3 arrays.
-
     Parameters
     ----------
 
-    fname_in, fname_out: String.
+    fname_in, fname_out : String.
         Path to the input LHalo binary tree and the path
         where the HDF5 tree will be saved.
 
@@ -836,8 +835,13 @@ def convert_binary_to_hdf5(fname_in, fname_out):
     ----------
 
     None.
+
+    Notes
+    ----------
+
+    Multi-dimensional arrays (e.g., 'Position') are saved as Nx3 arrays.
     """
-    
+
     LHalo_Desc, multipledim_names = get_LHalo_datastruct()
 
     with open(fname_in, "rb") as binary_file, \
@@ -874,7 +878,7 @@ def convert_binary_to_hdf5(fname_in, fname_out):
                 if not cmn.search_dict_of_lists(subgroup_name, multipledim_names):
                     hdf5_file[tree_name][subgroup_name] = binary_tree[subgroup_name]
 
-            # Then go through all the multi-dimensional arrays and save 
+            # Then go through all the multi-dimensional arrays and save
             # an Nx3 array that contains all the data.
             for name in multipledim_names:
 
@@ -884,10 +888,10 @@ def convert_binary_to_hdf5(fname_in, fname_out):
 
                 # Then populate that array.
                 for dim, dim_name in enumerate(multipledim_names[name]):
-                    array[:, dim] = binary_tree[dim_name] 
+                    array[:, dim] = binary_tree[dim_name]
 
                 # Finally save it.
-                hdf5_file[tree_name][name] = array 
+                hdf5_file[tree_name][name] = array
 
 
 def get_hubble_h(f_in):
@@ -897,13 +901,13 @@ def get_hubble_h(f_in):
     Parameters
     ----------
 
-    f_in: Open HDF5 File.
+    f_in : Open HDF5 File.
         The open HDF5 file we're reading the data from.
 
     Returns
     ----------
 
-    hubble_h: Float.
+    hubble_h : Float.
         The value of Hubble little h for the given cosmology.
     """
 
