@@ -46,7 +46,7 @@ def get_sort_indices(file_in, snap_key, sort_fields, sort_direction):
         Array containing the indices that sorts the data using the specified
         sort keys.
 
-    Examples 
+    Examples
     ----------
 
         sort_fields = ["ForestID", "Mass_200mean"]

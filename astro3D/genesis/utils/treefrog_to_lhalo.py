@@ -11,11 +11,15 @@ from tqdm import trange
 
 import time
 
-from mpi4py import MPI
-
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
+try:
+    from mpi4py import MPI
+except ImportError:
+    rank = 0
+    size = 1
+else:
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
 
 __all__ = ("treefrog_to_lhalo", )
 
