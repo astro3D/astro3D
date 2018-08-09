@@ -24,6 +24,20 @@ from os.path import abspath, dirname, join as pjoin
 
 sys.path.insert(0, os.path.abspath('../..'))
 
+# -- Mocking Modules ---------------------------------------------------------
+
+# http://docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+
+from unittest.mock import MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+MOCK_MODULES = ['mpi4py']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
 # -- Project information -----------------------------------------------------
 
 project = 'astro3D'
