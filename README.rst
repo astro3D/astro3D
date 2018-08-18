@@ -2,9 +2,9 @@
 
 astro3D
 ========
-Python package for the Genesis simulations from ASTRO3D
+Python package for the Genesis simulations from `ASTRO 3D <http://astro3d.org.au/>`_
 
-Documenation can be found at http://astro3d.readthedocs.io/en/latest/
+Documenation is hosted on `ReadTheDocs <http://astro3d.readthedocs.io/en/latest/>`_
 
 .. |TRAVIS| image:: https://travis-ci.com/manodeep/astro3D.svg?branch=master
   :target: https://travis-ci.com/manodeep/astro3D
